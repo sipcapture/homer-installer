@@ -1,5 +1,9 @@
-# homer-installer
-HOMER 5 Installer 
+![Logo](http://sipcapture.org/data/images/sipcapture_header.png)
+
+# __HOMER 5__  Installer
+This document provides guidance and details to get HOMER 5 installed using packages
+
+![splitter](http://i.imgur.com/lytn4zn.png)
 
 ##### Create DEB Package (FPM)
 ```
