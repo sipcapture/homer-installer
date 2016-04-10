@@ -5,6 +5,7 @@ This document provides guidance and details to get HOMER 5 installed using packa
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
+## Debian
 ##### Create DEB Package (FPM)
 ```
 cd /usr/src
@@ -18,4 +19,9 @@ NOTE: Dependencies will be resolved by the second step
 ```
 dpkg -i ./homer-installer_5.0.5-1_amd64.deb
 apt-get -f install
+```
+
+## CentOS
+```
+coming soon!
 ```
