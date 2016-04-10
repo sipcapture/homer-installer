@@ -3,10 +3,13 @@
 # __HOMER 5__  Installer
 This document provides guidance and details to get HOMER 5 installed using packages
 
+### Requirements:
+* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
+
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
 ## Debian 8
-##### Create DEB Package (FPM)
+##### Create DEB Package
 ```
 cd /usr/src
 git clone https://github.com/lmangani/homer-installer
