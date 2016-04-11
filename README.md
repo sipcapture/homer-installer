@@ -1,15 +1,26 @@
 ![Logo](http://sipcapture.org/data/images/sipcapture_header.png)
 
 # __HOMER 5__  Installer
-This document provides guidance and details to get HOMER 5 installed using packages
+This document provides guidance and details to get HOMER 5 installed using scripts or packages
 
-##### Requirements:
-* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
+## Installer
+Supported OS:
+* Debian 8
+* CentOS 7
+
+```
+bash <( curl -s https://raw.githubusercontent.com/sipcapture/homer/master/utils/install.sh )
+```
+
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
 ## Debian 8 
 ##### Create DEB Package
+###### Requirements:
+* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
+* rpmbuild
+
 ```
 cd /usr/src
 git clone https://github.com/lmangani/homer-installer
@@ -18,6 +29,9 @@ cd homer-installer
 ```
 
 ##### Install DEB Package
+###### Requirements:
+* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
+
 NOTE: Dependencies will be resolved by the second step
 ```
 dpkg -i ./homer-installer_5.0.5-1_amd64.deb
