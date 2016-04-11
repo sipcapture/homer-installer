@@ -7,7 +7,7 @@ WARNING: The installer and packages are experimental. Use at your own risk! For 
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
-## :page_with_curl: Bash Installer
+## :page_with_curl: Bash Installer (suggested)
 The baseline installer expects a Vanilla OS and will install and configure:
 * Homer 5.x
 * Kamailio 4.4
