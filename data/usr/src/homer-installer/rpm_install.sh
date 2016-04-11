@@ -180,13 +180,7 @@ echo
                   echo "Starting mysql secure installation [ $sqlpassword ] "
                   echo "Please follow the prompts: "
                   sudo mysql_secure_installation -p"$sqlpassword"  --use-default
-		  echo "------------"
-		  echo
-                        read -s -p "Please provide MYSQL root password: " sqlpassword
-                        while ! mysql -u root -p$sqlpassword  -e ";" ; do
-                               read -p "Can't connect, please try again: " sqlpassword
-                       	done
-
+		  
                        	echo "Generating homer mysql user..."
                         sqlhomeruser="homer"
                         DB_USER="$sqlhomeruser"
@@ -203,9 +197,9 @@ echo
 		  #mysql_install_db --user=mysql --datadir="$DATADIR"
 
 		  MYSQL_RUN
-
-		  mysql -u "$sqluser" -p"$sqlpassword" -e "SET GLOBAL validate_password_policy=LOW;"
-		  mysql -u "$sqluser" -p"$sqlpassword" -e "GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;";
+		  
+		  # User-Auth input required!
+		  mysql -u "$sqluser" -p"$sqlpassword" -e "SET GLOBAL validate_password_policy=LOW;GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;";
 
 		  echo "Creating Databases..."
 		  mysql -u "$DB_USER" -p"$DB_PASS" < $SQL_LOCATION/homer_databases.sql
