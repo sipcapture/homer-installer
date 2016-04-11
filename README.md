@@ -33,6 +33,7 @@ cd homer-installer
 ./generate_rpm.sh
 ```
 ##### Install RPM Package
+Note: The script might prompt for mysql password multiple times if needed
 ```
 yum -y install wget
 wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
