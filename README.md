@@ -21,7 +21,7 @@ Supported OS:
 ### Run & Install:
 Execute the following command and follow the interactive prompts to install:
 ```
-bash <( curl -s https://cdn.rawgit.com/lmangani/homer-installer/master/homer_installer.sh )
+bash <( curl -s https://cdn.rawgit.com/sipcapture/homer-installer/master/homer_installer.sh )
 ```
 
 
@@ -35,7 +35,7 @@ bash <( curl -s https://cdn.rawgit.com/lmangani/homer-installer/master/homer_ins
 
 ```
 cd /usr/src
-git clone https://github.com/lmangani/homer-installer
+git clone https://github.com/sipcapture/homer-installer
 cd homer-installer
 ./generate_deb.sh
 ```
@@ -55,7 +55,7 @@ apt-get -f install
 * rpmbuild
 ```
 cd /usr/src
-git clone https://github.com/lmangani/homer-installer
+git clone https://github.com/sipcapture/homer-installer
 cd homer-installer
 ./generate_rpm.sh
 ```
