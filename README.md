@@ -5,6 +5,14 @@ This document provides guidance and details to get HOMER 5 installed stand-alone
 
 WARNING: Homer is rock-solid, while the installers and packages are experimental. Use at your own risk! For a reliable and fine-tuned setup please carefully review each element and/or contact support@sipcapture.org team for professional assistance.
 
+Available Methods:
+
+  * [BASH Installer](https://github.com/sipcapture/homer-installer#page_with_curl-bash-installer)
+  * [DEB/RPM Installer](https://github.com/sipcapture/homer-installer#package-packages)
+  * [DOCKER Containers](https://github.com/sipcapture/homer-docker)
+  * [PUPPET Module](https://github.com/giavac/giavac-homer)
+
+
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
 ## :page_with_curl: Bash Installer
