@@ -11,7 +11,7 @@ Supported OS:
 * CentOS 7
 
 ```
-bash <( curl -s https://raw.githubusercontent.com/sipcapture/homer/master/utils/install.sh )
+bash <( curl -s https://cdn.rawgit.com/lmangani/homer-installer/master/homer_installer.sh )
 ```
 
 
