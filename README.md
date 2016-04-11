@@ -5,7 +5,7 @@ This document provides guidance and details to get HOMER 5 installed using scrip
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
-## Bash Installer
+## :page_with_curl: Bash Installer
 Supported OS:
 * Debian 8
 * CentOS 7
@@ -17,9 +17,9 @@ bash <( curl -s https://cdn.rawgit.com/lmangani/homer-installer/master/homer_ins
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
-## Packages
-### Debian 8 
-##### Create DEB Package
+## :package: Packages
+### :package: Debian 8 
+##### :page_with_curl: Create DEB Package
 ###### Requirements:
 * [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
 
@@ -38,8 +38,8 @@ dpkg -i ./homer-installer_5.0.5-1_amd64.deb
 apt-get -f install
 ```
 
-### CentOS 7 **[alpha test]**
-##### Create RPM Package
+### :package: CentOS 7 **[alpha]**
+##### :page_with_curl: Create RPM Package
 ###### Requirements:
 * [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
 * rpmbuild
