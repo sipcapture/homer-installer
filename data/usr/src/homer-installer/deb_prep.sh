@@ -32,12 +32,6 @@ if [ -f /etc/debian_version ] ; then
 	echo
 	echo "     apt-get -y install -f"
 	echo
-# elif [ -f /etc/redhat-release ] ; then
-#    DIST="CENTOS"
-#    echo "OS: CENTOS detected"
-# elif [ -f /etc/SuSE-release ] ; then
-#   DIST="SUSE"
-#   echo "OS: SUSE detected"
 else
     echo "ERROR:"
     echo "Sorry, this Installer supports Debian flavoures systems only!"
