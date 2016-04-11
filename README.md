@@ -69,7 +69,7 @@ wget http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentO
 yum install homer-installer-5.0.5-1.x86_64.rpm
 ```
 
----------------
+![splitter](http://i.imgur.com/lytn4zn.png)
 
 
 ### Developers
