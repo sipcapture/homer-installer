@@ -308,7 +308,7 @@ case $DIST in
 	   WEBSERV="httpd"
 	   MYSQL="mysqld"
            COMMON_PKGS=" autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils make gcc gcc-c++ gettext-devel gnutls-devel openssl openssl-devel openssl-devel mod_ssl perl patch unzip wget zip zlib zlib-devel bison flex mysql pcre-devel libxml2-devel sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
-	   VERS=$(cat /etc/redhat-release |cut -d' ' -f3 |cut -d'.' -f1)
+	   VERS=$(cat /etc/redhat-release |cut -d' ' -f4 |cut -d'.' -f1)
 	   if [ "$VERS" = "6" ]; then
 		wget http://dev.mysql.com/get/mysql57-community-release-el6-7.noarch.rpm
 		yum localinstall mysql57-community-release-el6-7.noarch.rpm
@@ -360,7 +360,7 @@ case $DIST in
 
 			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
 			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-docker/data/vhost.conf /etc/apache2/sites-enabled/000-default.conf
+			cp /usr/src/homer-docker/data/vhost.conf /etc/httpd/conf.d/sipcapture.conf
 		
 			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
