@@ -1,13 +1,13 @@
 ![Logo](http://sipcapture.org/data/images/sipcapture_header.png)
 
 # __HOMER 5__  Installer
-This document provides guidance and details to get HOMER 5 installed using scripts or packages
+This document provides guidance and details to get HOMER 5 installed stand-alone using scripts or packages
 
 WARNING: The installer and packages are experimental. Use at your own risk! For a reliable and fine-tuned setup please carefully review each element and/or contact support@sipcapture.org team for professional assistance.
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
-## :page_with_curl: Bash Installer (suggested)
+## :page_with_curl: Bash Installer
 The baseline installer expects a Vanilla OS and will install and configure:
 * Homer 5.x
 * Kamailio 4.4
@@ -18,6 +18,8 @@ Supported OS:
 * Debian 8
 * CentOS 7
 
+### Run & Install:
+Execute the following command and follow the interactive prompts to install:
 ```
 bash <( curl -s https://cdn.rawgit.com/lmangani/homer-installer/master/homer_installer.sh )
 ```
