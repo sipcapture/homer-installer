@@ -22,7 +22,6 @@ bash <( curl -s https://cdn.rawgit.com/lmangani/homer-installer/master/homer_ins
 ##### Create DEB Package
 ###### Requirements:
 * [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
-* rpmbuild
 
 ```
 cd /usr/src
@@ -32,8 +31,6 @@ cd homer-installer
 ```
 
 ##### Install DEB Package
-###### Requirements:
-* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
 
 NOTE: Dependencies will be resolved by the second step
 ```
@@ -43,6 +40,9 @@ apt-get -f install
 
 ### CentOS 7 **[alpha test]**
 ##### Create RPM Package
+###### Requirements:
+* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
+* rpmbuild
 ```
 cd /usr/src
 git clone https://github.com/lmangani/homer-installer
