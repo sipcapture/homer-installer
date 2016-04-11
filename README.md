@@ -8,6 +8,12 @@ WARNING: The installer and packages are experimental. Use at your own risk! For 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
 ## :page_with_curl: Bash Installer
+The baseline installer expects a Vanilla OS and will install and configure:
+* Homer 5.x
+* Kamailio 4.4
+* MySQL 5.7
+* Apache2 + PHP5
+
 Supported OS:
 * Debian 8
 * CentOS 7
