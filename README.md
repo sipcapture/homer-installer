@@ -50,7 +50,7 @@ cd homer-installer
 
 ##### Install DEB Package
 
-NOTE: Dependencies will be resolved by the second step
+NOTE: Missing dependencies will be automatically resolved by apt-get the second step.
 ```
 dpkg -i ./homer-installer_5.0.5-1_amd64.deb
 apt-get -f install
@@ -68,7 +68,7 @@ cd homer-installer
 ./generate_rpm.sh
 ```
 ##### Install RPM Package
-Note: The script might prompt for mysql password multiple times if needed
+Note: The script will prompt for mysql password multiple times (if needed) during setup.
 ```
 yum -y install wget
 wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
