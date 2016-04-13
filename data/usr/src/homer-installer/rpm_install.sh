@@ -231,6 +231,10 @@ echo
 		PATH_HOMER_CONFIG=$WEBROOT/api/configuration.php
 		chmod 775 $PATH_HOMER_CONFIG
 
+                # Patch rotation script auth
+                perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
+                perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
+
 		# Replace values in template
 		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
 		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_HOMER_CONFIG
