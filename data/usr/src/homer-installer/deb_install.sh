@@ -248,9 +248,12 @@ case $DIST in
 		PATH_HOMER_CONFIG=$WEBROOT/api/configuration.php
 		chmod 775 $PATH_HOMER_CONFIG
 
-                # Patch rotation script auth
-                perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
-                perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
+		# Patch rotation script auth
+		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
+		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
+		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_mysql_new_table.pl
+		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_mysql_new_table.pl
+
 
 		# Replace values in template
 		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
