@@ -237,12 +237,14 @@ case $DIST in
    			sqlhomeruser="homer"
 		  	DB_USER="$sqlhomeruser"
    		  fi
+   		  
    		  if [ "$sqlhomerpassword" = "" ] ; then
    			echo "Using random password... "
    			sqlhomerpassword=$(cat /dev/urandom|tr -dc "a-zA-Z0-9"|fold -w 9|head -n 1)
-		  	DB_PASS="$sqlhomerpassword"
    		  fi
 
+		  DB_USER="$sqlhomeruser"
+		  DB_PASS="$sqlhomerpassword"
 		  DATADIR=/var/lib/mysql
 
 		  echo "Beginning initial data load...."
