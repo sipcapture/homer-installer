@@ -289,8 +289,8 @@ case $DIST in
 		# Patch rotation script auth
 		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
 		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
-		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_mysql_new_table.pl
-		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_mysql_new_table.pl
+		perl -p -i -e "s/homer_user/$DB_USER/" /opt/rotation.ini
+		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
 		
 		# Replace values in template
 		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
@@ -484,8 +484,8 @@ case $DIST in
 		# Patch rotation script auth
 		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
 		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
-		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_mysql_new_table.pl
-		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_mysql_new_table.pl
+		perl -p -i -e "s/homer_user/$DB_USER/" /opt/rotation.ini
+		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
 
 		# Replace values in template
 		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
