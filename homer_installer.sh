@@ -568,7 +568,7 @@ echo "*************************************************************"
 echo
 echo "     * Verify configuration for HOMER-API:"
 echo "         '$WEBROOT/api/configuration.php'"
-echo "         '$WEBROOT/a[o/preferences.php'"
+echo "         '$WEBROOT/api/preferences.php'"
 echo
 echo "     * Verify capture settings for Homer/Kamailio:"
 echo "         '$REAL_PATH/etc/kamailio/kamailio.cfg'"
