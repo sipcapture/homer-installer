@@ -188,6 +188,9 @@ case $DIST in
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
 		   	cd homer-docker; git pull; cd ..
+			#copy any newly updated scripts
+			chmod +x /usr/src/homer-api/scripts/*
+			cp /usr/src/homer-api/scripts/* /opt/
 		fi
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
