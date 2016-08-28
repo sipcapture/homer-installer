@@ -170,8 +170,8 @@ case $DIST in
 		apt-get update && apt-get install -y mysql-server-5.7 libmysqlclient18
 		# Kamailio + sipcapture module
 		apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xfb40d3e6508ea4c8
-		echo "deb http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list
-		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list
+		echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio.list
+		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio.list
 		apt-get update && apt-get install -f -yqq kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules geoip-database geoip-database-extra
 
 
@@ -188,6 +188,9 @@ case $DIST in
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
 		   	cd homer-docker; git pull; cd ..
+			#copy any newly updated scripts
+			chmod +x /usr/src/homer-api/scripts/*
+			cp /usr/src/homer-api/scripts/* /opt/
 		fi
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
@@ -391,6 +394,9 @@ case $DIST in
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
 		   	cd homer-docker; git pull; cd ..
+			#copy any newly updated scripts
+			chmod +x /usr/src/homer-api/scripts/*
+			cp /usr/src/homer-api/scripts/* /opt/
 		fi
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
