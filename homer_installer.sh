@@ -165,11 +165,11 @@ case $DIST in
 
 		# MySQL
 		apt-get install -y perl libdbi-perl libclass-dbi-mysql-perl --no-install-recommends
-		apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys A4A9406876FCBD3C456770C88C718D3B5072E1F5
+		apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys A4A9406876FCBD3C456770C88C718D3B5072E1F5
 		echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list
 		apt-get update && apt-get install -y mysql-server-5.7 libmysqlclient18
 		# Kamailio + sipcapture module
-		apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xfb40d3e6508ea4c8
+		apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xfb40d3e6508ea4c8
 		echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio.list
 		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio.list
 		apt-get update && apt-get install -f -yqq kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules geoip-database geoip-database-extra
