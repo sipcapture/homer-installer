@@ -167,7 +167,7 @@ case $DIST in
 		apt-get install -y perl libdbi-perl libclass-dbi-mysql-perl --no-install-recommends
 		apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys A4A9406876FCBD3C456770C88C718D3B5072E1F5
 		echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list
-		apt-get update && apt-get install -y mysql-server-5.7 libmysqlclient18
+		apt-get update && apt-get install -y mysql-server libmysqlclient18
 		# Kamailio + sipcapture module
 		apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xfb40d3e6508ea4c8
 		echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio.list
