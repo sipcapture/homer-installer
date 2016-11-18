@@ -494,6 +494,8 @@ case $DIST in
 		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
 		perl -p -i -e "s/homer_user/$DB_USER/" /opt/rotation.ini
 		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
+		# Patch rotation script mysql socket location
+		perl -p -i -e "s/lib\/mysql/var\/mysqld/" /opt/rotation.ini
 
 		# Replace values in template
 		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
