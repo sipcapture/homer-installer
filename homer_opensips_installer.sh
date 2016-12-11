@@ -320,10 +320,10 @@ case $DIST in
     ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu/
 
 		# Replace values in template
-		perl -p -i -e "s/\{\{ LISTEN_PORT \}\}/$LISTEN_PORT/" $PATH_OPENSIPS_CFG
-		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_OPENSIPS_CFG
-		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_OPENSIPS_CFG
-		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/homer_password/$DB_PASS/g" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/127.0.0.1/$DB_HOST/g" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/homer_user/$DB_USER/g" $PATH_OPENSIPS_CFG
 
 		sed -i -e "s/#RUN_OPENSIPS/RUN_OPENSIPS/g" /etc/default/opensips
 		sed -i -e "s/#CFGFILE/CFGFILE/g" /etc/default/opensips
@@ -523,10 +523,10 @@ case $DIST in
 		ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 
 		# Replace values in template
-		perl -p -i -e "s/\{\{ LISTEN_PORT \}\}/$LISTEN_PORT/" $PATH_OPENSIPS_CFG
-		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_OPENSIPS_CFG
-		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_OPENSIPS_CFG
-		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/homer_password/$DB_PASS/g" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/127.0.0.1/$DB_HOST/g" $PATH_OPENSIPS_CFG
+		perl -p -i -e "s/homer_user/$DB_USER/g" $PATH_OPENSIPS_CFG
 
 		sed -i -e "s/#RUN_OPENSIPS/RUN_OPENSIPS/g" /etc/default/opensips
 		sed -i -e "s/#CFGFILE/CFGFILE/g" /etc/default/opensips
