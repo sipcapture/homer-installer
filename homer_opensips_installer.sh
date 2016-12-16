@@ -99,7 +99,7 @@ if [ -f /etc/debian_version ] ; then
     echo "OS: DEBIAN detected"
 elif [ -f /etc/redhat-release ] ; then
     DIST="CENTOS"
-    VERS=$(cat /etc/redhat-release |cut -d' ' -f4 |cut -d'.' -f1)
+    VERS=$(sed 's/.* \([0-9]*\)\.[0-9]*.*/\1/' /etc/redhat-release)
     if [ "$VERS" = "7" ]; then
 	    echo "OS: CENTOS 7 detected"
 	    read -p "Support for CentOS is experimental and likely broken. Continue (y/N)? " choice
@@ -359,7 +359,7 @@ case $DIST in
 		   	echo "HALT! Something went wrong. Please resolve the errors above and try again."
 		   	exit 1
 		       fi
-      yum install http://yum.opensips.org/2.2/releases/el/6/x86_64/opensips-yum-releases-2.2-3.el6.noarch.rpm
+      yum install -y http://yum.opensips.org/2.2/releases/el/6/x86_64/opensips-yum-releases-2.2-3.el6.noarch.rpm
 
            elif [ "$VERS" = "7" ]; then
 		wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
@@ -369,7 +369,7 @@ case $DIST in
 		   	echo "HALT! Something went wrong. Please resolve the errors above and try again."
 		   	exit 1
 		       fi
-        yum install http://yum.opensips.org/2.2/releases/el/7/x86_64/opensips-yum-releases-2.2-3.el7.noarch.rpm
+        yum install -y http://yum.opensips.org/2.2/releases/el/7/x86_64/opensips-yum-releases-2.2-3.el7.noarch.rpm
 	   fi
 	   yum -y update
 	   yum -y install $COMMON_PKGS libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server opensips rsyslog 
@@ -383,7 +383,7 @@ case $DIST in
 		   echo "GIT: Cloning Homer components..."
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/QXIP/homer-config.git homer-config
+			git clone --depth 1 https://github.com/sipcapture/homer-config.git homer-config
 			chmod +x /usr/src/homer-api/scripts/*
 			cp /usr/src/homer-api/scripts/* /opt/
 		else
@@ -579,7 +579,7 @@ echo "     * Verify capture settings for Homer/OpenSIPS:"
 echo "         '$REAL_PATH/etc/opensips/opensips.cfg'"
 echo
 echo "     * Start/stop Homer SIP Capture:"
-echo "         '$REAL_PATH/sbin/kamctl start|stop'"
+echo "         '$REAL_PATH/sbin/opensipsctl start|stop'"
 echo
 echo "     * Access HOMER UI:"
 echo "         http://$LOCAL_IP or http://$LOCAL_IP"
