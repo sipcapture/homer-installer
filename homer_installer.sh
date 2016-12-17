@@ -107,13 +107,13 @@ function get_kamailio {
 
 echo "HEP SERVER: Please select your preference:"
 echo
-echo "   K) Kamailio 4.x"
+echo "   K) Kamailio 4.4"
 echo "   O) OpenSIPS 2.2"
 echo
 
 read -p "Choose: (O)penSIPS or (K)amailio: " choice
 case "$choice" in 
   k|K ) echo "Selecting Kamailio..." && get_kamailio;;
-  o|O ) echo "Selecting OpenSIPS" && get_opensips;;
+  o|O ) echo "Selecting OpenSIPS..." && get_opensips;;
   * ) echo "Invalid Choice! Exiting... " && exit 1 ;;
 esac
