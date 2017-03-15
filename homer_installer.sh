@@ -207,7 +207,7 @@ case $DIST in
 			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
-			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | sort - | uniq - | crontab -
+			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
 
 		# Handy-dandy MySQL run function
 		function MYSQL_RUN () {
@@ -412,7 +412,7 @@ case $DIST in
 			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
-			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | sort - | uniq - | crontab -
+			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
 
 		# Handy-dandy MySQL run function
                 function MYSQL_RUN () {
