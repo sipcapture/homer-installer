@@ -180,14 +180,14 @@ case $DIST in
 		   echo "GIT: Cloning Homer components..."
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
+			git clone --depth 1 https://github.com/QXIP/homer-config.git homer-config
 			chmod +x /usr/src/homer-api/scripts/mysql/*
 			cp /usr/src/homer-api/scripts/mysql/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
-		   	cd homer-docker; git pull; cd ..
+		   	cd homer-config; git pull; cd ..
 			#copy any newly updated scripts
 			chmod +x /usr/src/homer-api/scripts/mysql/*
 			cp /usr/src/homer-api/scripts/mysql/* /opt/
@@ -200,11 +200,11 @@ case $DIST in
 
 			SQL_LOCATION=/usr/src/homer-api/sql/mysql
 
-			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-docker/data/vhost.conf /etc/apache2/sites-enabled/000-default.conf
+			cp /usr/src/homer-config/docker/configuration.php $WEBROOT/api/configuration.php
+			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
+			cp /usr/src/homer-config/docker/vhost.conf /etc/apache2/sites-enabled/000-default.conf
 
-			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
+			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
 			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
@@ -317,7 +317,7 @@ case $DIST in
 
 		# KAMAILIO
 		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-docker/data/kamailio.cfg $PATH_KAMAILIO_CFG
+		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 $PATH_KAMAILIO_CFG
 
 		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
@@ -386,14 +386,14 @@ case $DIST in
 		   echo "GIT: Cloning Homer components..."
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
+			git clone --depth 1 https://github.com/QXIP/homer-config.git homer-config
 			chmod +x /usr/src/homer-api/scripts/mysql/*
 			cp /usr/src/homer-api/scripts/mysql/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
-		   	cd homer-docker; git pull; cd ..
+		   	cd homer-config; git pull; cd ..
 			#copy any newly updated scripts
 			chmod +x /usr/src/homer-api/scripts/mysql/*
 			cp /usr/src/homer-api/scripts/mysql/* /opt/
@@ -406,10 +406,10 @@ case $DIST in
 
 			SQL_LOCATION=/usr/src/homer-api/sql/mysql
 
-			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-docker/data/vhost.conf /etc/httpd/conf.d/sipcapture.conf
-			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
+			cp /usr/src/homer-config/docker/configuration.php $WEBROOT/api/configuration.php
+			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
+			cp /usr/src/homer-config/docker/vhost.conf /etc/httpd/conf.d/sipcapture.conf
+			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
 			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
@@ -520,7 +520,7 @@ case $DIST in
 
 		# KAMAILIO
 		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-docker/data/kamailio.cfg $PATH_KAMAILIO_CFG
+		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 $PATH_KAMAILIO_CFG
 
 		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
