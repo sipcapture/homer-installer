@@ -181,16 +181,16 @@ case $DIST in
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
 			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
-			chmod +x /usr/src/homer-api/scripts/*
-			cp /usr/src/homer-api/scripts/* /opt/
+			chmod +x /usr/src/homer-api/scripts/mysql/*
+			cp /usr/src/homer-api/scripts/mysql/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
 		   	cd homer-docker; git pull; cd ..
 			#copy any newly updated scripts
-			chmod +x /usr/src/homer-api/scripts/*
-			cp /usr/src/homer-api/scripts/* /opt/
+			chmod +x /usr/src/homer-api/scripts/mysql/*
+			cp /usr/src/homer-api/scripts/mysql/* /opt/
 		fi
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
@@ -387,16 +387,16 @@ case $DIST in
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
 			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
-			chmod +x /usr/src/homer-api/scripts/*
-			cp /usr/src/homer-api/scripts/* /opt/
+			chmod +x /usr/src/homer-api/scripts/mysql/*
+			cp /usr/src/homer-api/scripts/mysql/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
 		   	cd homer-docker; git pull; cd ..
 			#copy any newly updated scripts
-			chmod +x /usr/src/homer-api/scripts/*
-			cp /usr/src/homer-api/scripts/* /opt/
+			chmod +x /usr/src/homer-api/scripts/mysql/*
+			cp /usr/src/homer-api/scripts/mysql/* /opt/
 		fi
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
