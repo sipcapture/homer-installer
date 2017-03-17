@@ -198,7 +198,7 @@ case $DIST in
 			chown -R www-data:www-data $WEBROOT/store/
 			chmod -R 0775 $WEBROOT/store/dashboard
 
-			SQL_LOCATION=/usr/src/homer-api/sql
+			SQL_LOCATION=/usr/src/homer-api/sql/mysql
 
 			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
 			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
@@ -404,7 +404,7 @@ case $DIST in
 			chown -R www-data:www-data $WEBROOT/store/
 			chmod -R 0775 $WEBROOT/store/dashboard
 
-			SQL_LOCATION=/usr/src/homer-api/sql
+			SQL_LOCATION=/usr/src/homer-api/sql/mysql
 
 			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
 			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
