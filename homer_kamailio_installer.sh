@@ -170,8 +170,8 @@ case $DIST in
 		apt-get update && apt-get install -y mysql-server libmysqlclient18
 		# Kamailio + sipcapture module
 		apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xfb40d3e6508ea4c8
-		echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio.list
-		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio.list
+		echo "deb http://deb.kamailio.org/kamailio50 jessie main" > /etc/apt/sources.list.d/kamailio.list
+		echo "deb-src http://deb.kamailio.org/kamailio50 jessie main" >> /etc/apt/sources.list.d/kamailio.list
 		apt-get update && apt-get install -f -yqq kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules geoip-database geoip-database-extra
 
 
@@ -180,14 +180,14 @@ case $DIST in
 		   echo "GIT: Cloning Homer components..."
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
+			git clone --depth 1 https://github.com/QXIP/homer-config.git homer-config
 			chmod +x /usr/src/homer-api/scripts/*
 			cp /usr/src/homer-api/scripts/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
-		   	cd homer-docker; git pull; cd ..
+		   	cd homer-config; git pull; cd ..
 			#copy any newly updated scripts
 			chmod +x /usr/src/homer-api/scripts/*
 			cp /usr/src/homer-api/scripts/* /opt/
@@ -200,11 +200,11 @@ case $DIST in
 
 			SQL_LOCATION=/usr/src/homer-api/sql
 
-			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-docker/data/vhost.conf /etc/apache2/sites-enabled/000-default.conf
+			cp /usr/src/homer-config/docker/configuration.php $WEBROOT/api/configuration.php
+			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
+			cp /usr/src/homer-config/docker/vhost.conf /etc/apache2/sites-enabled/000-default.conf
 
-			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
+			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
 			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | sort - | uniq - | crontab -
@@ -317,7 +317,7 @@ case $DIST in
 
 		# KAMAILIO
 		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-docker/data/kamailio.cfg $PATH_KAMAILIO_CFG
+		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 $PATH_KAMAILIO_CFG
 
 		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
@@ -362,7 +362,7 @@ case $DIST in
 		   	echo "HALT! Something went wrong. Please resolve the errors above and try again."
 		   	exit 1
 		       fi
-		wget http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_6/home:kamailio:v4.4.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
+		wget http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_6/home:kamailio:v5.0.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
 
            elif [ "$VERS" = "7" ]; then
 		wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
@@ -372,7 +372,7 @@ case $DIST in
 		   	echo "HALT! Something went wrong. Please resolve the errors above and try again."
 		   	exit 1
 		       fi
-		wget http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
+		wget http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
 	   fi
 	   yum -y update
 	   yum -y install $COMMON_PKGS libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server kamailio rsyslog kamailio-outbound kamailio-sctp kamailio-tls kamailio-websocket kamailio-jansson kamailio-mysql
@@ -386,14 +386,14 @@ case $DIST in
 		   echo "GIT: Cloning Homer components..."
 		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
+			git clone --depth 1 https://github.com/QXIP/homer-config.git homer-config
 			chmod +x /usr/src/homer-api/scripts/*
 			cp /usr/src/homer-api/scripts/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
 		   	cd homer-api; git pull; cd ..
 		   	cd homer-ui; git pull; cd ..
-		   	cd homer-docker; git pull; cd ..
+		   	cd homer-config; git pull; cd ..
 			#copy any newly updated scripts
 			chmod +x /usr/src/homer-api/scripts/*
 			cp /usr/src/homer-api/scripts/* /opt/
@@ -406,10 +406,10 @@ case $DIST in
 
 			SQL_LOCATION=/usr/src/homer-api/sql
 
-			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-docker/data/vhost.conf /etc/httpd/conf.d/sipcapture.conf
-			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
+			cp /usr/src/homer-config/docker/configuration.php $WEBROOT/api/configuration.php
+			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
+			cp /usr/src/homer-config/docker/vhost.conf /etc/httpd/conf.d/sipcapture.conf
+			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
 			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | sort - | uniq - | crontab -
@@ -520,7 +520,7 @@ case $DIST in
 
 		# KAMAILIO
 		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-docker/data/kamailio.cfg $PATH_KAMAILIO_CFG
+		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 $PATH_KAMAILIO_CFG
 
 		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
