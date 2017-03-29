@@ -170,8 +170,8 @@ case $DIST in
 		apt-get update && apt-get install -y mysql-server libmysqlclient18
 		# Kamailio + sipcapture module
 		apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xfb40d3e6508ea4c8
-		echo "deb http://deb.kamailio.org/kamailio50 jessie main" > /etc/apt/sources.list.d/kamailio.list
-		echo "deb-src http://deb.kamailio.org/kamailio50 jessie main" >> /etc/apt/sources.list.d/kamailio.list
+		echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio.list
+		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio.list
 		apt-get update && apt-get install -f -yqq kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules geoip-database geoip-database-extra
 
 
@@ -206,7 +206,7 @@ case $DIST in
 			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
 			cp /usr/src/homer-config/docker/vhost.conf /etc/apache2/sites-enabled/000-default.conf
 
-			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 /etc/kamailio/kamailio.cfg
+			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio /etc/kamailio/kamailio.cfg
 			chmod 775 /etc/kamailio/kamailio.cfg
 
 			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
@@ -319,7 +319,7 @@ case $DIST in
 
 		# KAMAILIO
 		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio5 $PATH_KAMAILIO_CFG
+		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio $PATH_KAMAILIO_CFG
 
 		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
