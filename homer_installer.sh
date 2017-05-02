@@ -271,7 +271,7 @@ case $DIST in
 		  mysql -u "$sqluser" homer_statistic < $SQL_LOCATION/schema_statistic.sql
 
 		  # echo "Creating local DB Node..."
-		  mysql -u "$sqluser" homer_configuration -e "INSERT INTO node VALUES(1,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
+		  mysql -u "$sqluser" homer_configuration -e "INSERT INTO node VALUES(0,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
 
 		  echo 'Setting root password....'
 		  mysql -u "$sqluser" -e "GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;";
