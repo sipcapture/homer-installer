@@ -300,9 +300,11 @@ case $DIST in
 		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
 		
 		# Replace values in template
-		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/homer_password/$DB_PASS/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/127\.0\.0\.1/$DB_HOST/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/homer_user/$DB_USER/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
+		
 		# Set Permissions for webapp
 		mkdir $WEBROOT/api/tmp
 		chmod -R 0777 $WEBROOT/api/tmp/
@@ -323,12 +325,6 @@ case $DIST in
 
 		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
-
-		# Replace values in template
-		perl -p -i -e "s/\{\{ LISTEN_PORT \}\}/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
-		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_KAMAILIO_CFG
-		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_KAMAILIO_CFG
-		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_KAMAILIO_CFG
 
 		sed -i -e "s/#RUN_KAMAILIO/RUN_KAMAILIO/g" /etc/default/kamailio
 		sed -i -e "s/#CFGFILE/CFGFILE/g" /etc/default/kamailio
@@ -503,9 +499,11 @@ case $DIST in
 		perl -p -i -e "s/lib\/mysql/var\/mysqld/" /opt/rotation.ini
 
 		# Replace values in template
-		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/homer_password/$DB_PASS/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/127\.0\.0\.1/$DB_HOST/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/homer_user/$DB_USER/" $PATH_HOMER_CONFIG
+		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
+		
 		# API talks to localhost on CentOS
 		perl -p -i -e "s/127.0.0.1/localhost/" $PATH_HOMER_CONFIG
 
@@ -531,12 +529,6 @@ case $DIST in
 		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
 		# Create SymLink for modules
 		ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
-
-		# Replace values in template
-		perl -p -i -e "s/\{\{ LISTEN_PORT \}\}/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
-		perl -p -i -e "s/\{\{ DB_PASS \}\}/$DB_PASS/" $PATH_KAMAILIO_CFG
-		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_KAMAILIO_CFG
-		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_KAMAILIO_CFG
 
 		sed -i -e "s/#RUN_KAMAILIO/RUN_KAMAILIO/g" /etc/default/kamailio
 		sed -i -e "s/#CFGFILE/CFGFILE/g" /etc/default/kamailio
