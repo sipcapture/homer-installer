@@ -300,10 +300,9 @@ case $DIST in
 		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
 		
 		# Replace values in template
-		perl -p -i -e "s/homer_password/$DB_PASS/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/127\.0\.0\.1/$DB_HOST/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/homer_user/$DB_USER/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
+		perl -p -i -e "s|^(#!substdef \"!HOMER_LISTEN_PORT)!.*|\1!${LISTEN_PORT}!g\"|" $PATH_KAMAILIO_CFG
+		perl -p -i -e "s|^(#!substdef \"!HOMER_DB_USER)!.*|\1!${DB_USER}!g\"|" $PATH_KAMAILIO_CFG
+		perl -p -i -e "s|^(#!substdef \"!HOMER_DB_PASSWORD)!.*|\1!${DB_PASS}!g\"|" $PATH_KAMAILIO_CFG
 		
 		# Set Permissions for webapp
 		mkdir $WEBROOT/api/tmp
