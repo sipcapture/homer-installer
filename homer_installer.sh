@@ -401,7 +401,7 @@ case $DIST in
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
 			cp -R /usr/src/homer-api/api $WEBROOT/
-			chown -R www-data:www-data $WEBROOT/store/
+			chown -R apache:apache $WEBROOT/store/
 			chmod -R 0775 $WEBROOT/store/dashboard
 
 			SQL_LOCATION=/usr/src/homer-api/sql/mysql
@@ -476,7 +476,7 @@ case $DIST in
 		  mysql -u "$DB_USER" -p"$DB_PASS" homer_statistic < $SQL_LOCATION/schema_statistic.sql
 
 		  # echo "Creating local DB Node..."
-		  mysql -u "$DB_USER" -p"$DB_PASS" homer_configuration -e "INSERT INTO node VALUES(1,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
+		  mysql -u "$DB_USER" -p"$DB_PASS" homer_configuration -e "INSERT INTO node VALUES(default,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
 
 		  echo "Homer initial data load complete" > $DATADIR/.homer_initialized
 
