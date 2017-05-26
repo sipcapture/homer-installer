@@ -401,7 +401,7 @@ case $DIST in
 
 			cp -R /usr/src/homer-ui/* $WEBROOT/
 			cp -R /usr/src/homer-api/api $WEBROOT/
-			chown -R www-data:www-data $WEBROOT/store/
+			chown -R apache:apache $WEBROOT/store/
 			chmod -R 0775 $WEBROOT/store/dashboard
 
 			SQL_LOCATION=/usr/src/homer-api/sql/mysql
