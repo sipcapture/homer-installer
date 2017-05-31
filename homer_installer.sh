@@ -39,564 +39,847 @@
 #                                                                   #
 #####################################################################
 
-# HOMER Options, defaults
-DB_USER=homer_user
-DB_PASS=homer_password
-DB_HOST="127.0.0.1"
-LISTEN_PORT=9060
-LOCAL_IP=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
-
-# HOMER MySQL Options, defaults
-sqluser=root
-sqlpassword=secret
-
-#### NO CHANGES BELOW THIS LINE! 
-
-VERSION=5.0.1
-HOSTNAME=$(hostname)
-
-logfile=/tmp/homer_installer.log
-
-# LOG INSTALLER OUTPUT TO $logfile
-mkfifo ${logfile}.pipe
-tee < ${logfile}.pipe $logfile &
-exec &> ${logfile}.pipe
-rm ${logfile}.pipe
-
-clear; 
-echo "**************************************************************"
-echo "                                                              "
-echo "      ,;;;;;,       HOMER SIP CAPTURE (http://sipcapture.org) "
-echo "     ;;;;;;;;;.     Single-Node Auto-Installer (beta $VERSION)"
-echo "   ;;;;;;;;;;;;;                                              "
-echo "  ;;;;  ;;;  ;;;;   <--------------- INVITE ---------------   "
-echo "  ;;;;  ;;;  ;;;;    --------------- 200 OK --------------->  "
-echo "  ;;;;  ...  ;;;;                                             " 
-echo "  ;;;;       ;;;;   WARNING: This installer is intended for   "
-echo "  ;;;;  ;;;  ;;;;   dedicated/vanilla OS setups without any   "
-echo "  ,;;;  ;;;  ;;;;   customization and with default settings   "
-echo "   ;;;;;;;;;;;;;                                              "
-echo "    :;;;;;;;;;;     THIS SCRIPT IS PROVIDED AS-IS, USE AT     "
-echo "     ^;;;;;;;^      YOUR *OWN* RISK, REVIEW LICENSE & DOCS    "
-echo "                                                              "
-echo "**************************************************************"
-echo;
-
-
-# Check if we're good on permissions
-if  [ "$(id -u)" != "0" ]; then
-  echo "ERROR: You must be a root user. Exiting..." 2>&1
-  echo  2>&1
-  exit 1
-fi
+[[ "$TRACE" ]] && { set -x; set -o functrace; }
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
-echo "OS: Dectecting System...."
-# Identify Linux Flavour
-if [ -f /etc/debian_version ] ; then
-    DIST="DEBIAN"
-    echo "OS: DEBIAN detected"
-elif [ -f /etc/redhat-release ] ; then
-    DIST="CENTOS"
-    VERS=$(cat /etc/redhat-release |cut -d' ' -f4 |cut -d'.' -f1)
-    if [ "$VERS" = "7" ]; then
-	    echo "OS: CENTOS 7 detected"
-	    read -p "Support for CentOS is experimental and likely broken. Continue (y/N)? " choice
-		case "$choice" in 
-		  y|Y ) echo;;
-		  n|N ) echo "Exiting" && exit 1;;
-		  * ) echo "invalid" && exit 1 ;;
-		esac
+logfile="/tmp/$(basename $0).$$.log"
+exec > >(tee -ia $logfile)
+exec 2> >(tee -ia $logfile >&2)
+
+trap 'exit 1' TERM
+my_pid=$$
+
+
+# HOMER Options, defaults
+DB_USER="homer"
+DB_PASS=""
+DB_HOST="localhost"
+LISTEN_PORT="9060"
+
+#### NO CHANGES BELOW THIS LINE! 
+
+DB_ADMIN_USER="root"
+DB_ADMIN_PASS=""
+DB_ADMIN_TEMP_PASS=""
+
+VERSION=5.0.1
+SETUP_ENTRYPOINT=""
+OS=""
+DISTRO=""
+DISTRO_VERSION=""
+WEB_ROOT=""
+
+######################################################################
+#
+# Start of function definitions
+#
+######################################################################
+is_root_user() {
+  # Function to check that the effective user id of the user running
+  # the script is indeed that of the root user (0)
+
+  if [[ $EUID != 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+have_commands() {
+  # Function to check if we can find the command(s) passed to us
+  # in the systems PATH
+
+  local cmd_list="$1"
+  local -a not_found=() 
+
+  for cmd in $cmd_list; do
+    command -v $cmd >/dev/null 2>&1 || not_found+=("$cmd")
+  done
+
+  if [[ ${#not_found[@]} == 0 ]]; then
+    # All commands found
+    return 0
+  else
+    # Something not found
+    return 1
+  fi
+}
+
+locate_cmd() {
+  # Function to return the full path to the cammnd passed to us
+  # Make sure it exists on the system first or else this exits
+  # the script execution
+
+  local cmd="$1"
+  local valid_cmd=""
+  
+  # valid_cmd=$(hash -t $cmd 2>/dev/null)
+  valid_cmd=$(command -v $cmd 2>/dev/null)
+  if [[ ! -z "$valid_cmd" ]]; then
+    echo "$valid_cmd"
+  else
+    echo "HALT: Please install package for command '$cmd'"
+    /bin/kill -s TERM $my_pid
+  fi
+  return 0
+}
+
+is_supported_os() {
+  # Function to see if the OS is a supported type, the 1st 
+  # parameter passed should be the OS type to check. The bash 
+  # shell has a built in variable "OSTYPE" which should be 
+  # sufficient for a start
+
+  local os_type=$1
+
+  case "$os_type" in
+    linux* ) OS="Linux"
+             minimal_command_list="lsb_release"
+             if ! have_commands "$minimal_command_list"; then
+               echo "ERROR: You need the following minimal set of commands installed:"
+               echo ""
+               echo "       $minimal_command_list"
+               echo ""
+               exit 1
+             fi
+             detect_linux_distribution # Supported OS, Check if supported distro.
+             return ;;  
+    *      ) return 1 ;;               # Unsupported OS
+  esac
+}
+
+detect_linux_distribution() {
+  # Function to see if a specific linux distribution is supported by this script
+  # If it is supported then the global variable SETUP_ENTRYPOINT is set to the 
+  # function to be executed for the system setup
+
+  local cmd_lsb_release=$(locate_cmd "lsb_release") || exit $?
+  local distro_name=$($cmd_lsb_release -si)
+  local distro_version=$($cmd_lsb_release -sr)
+  DISTRO="$distro_name"
+  DISTRO_VERSION="$distro_version"
+
+  case "$distro_name" in
+    Debian ) case "$distro_version" in
+               8* ) SETUP_ENTRYPOINT="setup_debian_8"
+                    return 0 ;; # Suported Distribution
+               *  ) return 1 ;; # Unsupported Distribution
+             esac
+             ;;
+    CentOS ) case "$distro_version" in
+               7* ) SETUP_ENTRYPOINT="setup_centos_7"
+                    return 0 ;; # Suported Distribution
+               *  ) return 1 ;; # Unsupported Distribution
+             esac
+             ;;
+    *      ) return 1 ;; # Unsupported Distribution
+ esac
+}
+
+check_status() {
+  # Function to check and do something with the return code of some command
+
+  local return_code="$1"
+
+  if [[ $return_code != 0 ]]; then
+    echo "HALT: Return code of command was '$return_code', aborting."
+    echo "Please check the log above and correct the issue."
+    exit 1
+  fi
+}
+
+repo_clone_or_update() {
+  # Function to clone a repository or update if it already exists locally
+
+  local base_dir=$1
+  local dest_dir=$2
+  local git_repo=$3
+  local git_branch=${4:-"origin/master"}
+  local cmd_git=$(locate_cmd "git") || exit $?
+
+  if [ -d "$base_dir" ]; then
+    cd "$base_dir"
+    if [ -d "$dest_dir" ]; then
+      cd $dest_dir
+      # $cmd_git pull
+      $cmd_git fetch --all
+      $cmd_git reset --hard "$git_branch"
+      check_status "$?"
+    else
+      $cmd_git clone --depth 1 "$git_repo" "$dest_dir"
+      check_status "$?"
     fi
-# elif [ -f /etc/SuSE-release ] ; then
-#   DIST="SUSE"
-#   echo "OS: SUSE detected"
-else
+    return 0
+  else
+    return 1
+  fi
+}
+
+create_or_update_dir() {
+  # This function essentially copies the homer ui/api from
+  # their source directory to their destination directory
+  # and sets the proper ownerships once done
+
+  local src_dir="$1"
+  local dst_dir="$2"
+
+  local cmd_find=$(locate_cmd "find")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_chown=$(locate_cmd "chown")
+  local cmd_cpio=$(locate_cmd "cpio")
+
+  if [ ! -d "$dst_dir" ]; then
+    $cmd_mkdir -p -m 0755 "$dst_dir"
+    check_status "$?"
+    $cmd_chown "$web_ownership" "$dst_dir"
+    check_status "$?"
+  fi
+
+  if [ ! -d "$src_dir" ]; then
+    echo "ERROR: Source directory '$src_dir' not found, aborting."
+    echo "Please check the log above and correct the issue."
+    exit 1
+  fi
+
+  cd "$src_dir"
+  $cmd_find . -depth -print | $cmd_cpio -dump "$dst_dir"/
+  check_status "$?"
+  $cmd_chown -R "$web_ownership" "$dst_dir"/
+  check_status "$?"
+}
+
+create_or_update_maintenance_scripts() {
+  # This function copies the sipcapture maintenance scripts to
+  # the homer maintenance scripts directory
+
+  local src_dir="$1"
+  local dst_dir="$2"
+  local db_type="$3"
+
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_chmod=$(locate_cmd "chmod")
+  local cmd_cp=$(locate_cmd "cp")
+  local cmd_ln=$(locate_cmd "ln")
+
+  if [[ ! -d "$dst_dir" ]]; then
+    $cmd_mkdir -p -m 0755 "$dst_dir"
+    check_status "$?"
+  fi
+
+  $cmd_cp $src_dir/"$db_type"/* "$dst_dir"/.
+  check_status "$?"
+  $cmd_ln -f -r -s "$dst_dir/homer_${db_type}_rotate" "$dst_dir/homer_rotate"
+  check_status "$?"
+}
+
+create_or_update_misc() {
+  # This function sets the ownerships/permissions of some required directories,
+  # It also ensures these directories exists beforhand
+
+  local -a web_dirs=(
+                     "0755|$web_doc_root/store" \
+                     "0755|$web_doc_root/store/dashboard" \
+                     "0777|$web_doc_root/api/tmp"
+                    )
+
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_chown=$(locate_cmd "chown")
+
+  local original_ifs=$IFS
+  IFS=$'|'
+  for details in "${web_dirs[@]}"; do
+    read -r perms dir <<< "$details"
+    if [[ ! -d "$dir" ]]; then
+      $cmd_mkdir -p -m "$perms" "$dir"
+      $cmd_chown "$web_ownership" "$dir"
+    else
+      $cmd_chown "$web_ownership" "$dir"
+    fi
+  done
+  IFS=$original_ifs
+}
+
+create_or_update_config() {
+  # This function copies the deafult configuration files for homer and kamailio into place
+
+  local kamailio_version=${1:-"4"}
+  local overwrite_dst=${2:-"yes"}
+  local -a cfg_files=(
+                       "$src_base_dir/$src_homer_config_dir/docker/configuration.php|$web_doc_root/api/configuration.php" \
+                       "$src_base_dir/$src_homer_config_dir/docker/preferences.php|$web_doc_root/api/preferences.php" \
+                       "$src_base_dir/$src_homer_config_dir/docker/vhost.conf|$web_cfg_root/sipcapture.conf" \
+                     )
+
+  cmd_cp=$(locate_cmd "cp")
+  cmd_chmod=$(locate_cmd "chmod")
+
+  case "$kamailio_version" in
+    4 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio|/etc/kamailio/kamailio.cfg") ;;
+    5 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio5|/etc/kamailio/kamailio.cfg") ;;
+  esac
+
+  local original_ifs=$IFS
+  IFS=$'|'
+  for cfg in "${cfg_files[@]}"; do
+    read -r src dst <<< "$cfg"
+    if [[ ! -e "$dst" ]] && [[ ! -L "$dst" ]]; then
+      $cmd_cp "$src" "$dst"
+      check_status "$?"
+      $cmd_chmod 0644 "$dst"
+      check_status "$?"
+    else
+      if [[ "$overwrite_dst" == "yes" ]]; then
+        $cmd_cp -f "$src" "$dst"
+        check_status "$?"
+        $cmd_chmod 0644 "$dst"
+        check_status "$?"
+      fi
+    fi
+  done
+  IFS=$original_ifs
+}
+
+create_or_update_cron() {
+  # This function updates the crontab entry for the current user
+
+  local cron_log="${1:-/var/log/cron.log}"
+
+  local cmd_crontab=$(locate_cmd "crontab")
+  local cmd_sort=$(locate_cmd "sort")
+  local cmd_uniq=$(locate_cmd "uniq")
+
+  ( 
+    $cmd_crontab -l; \
+    echo "30 3 * * * /opt/homer/homer_rotate >> $cron_log 2>&1"
+  ) \
+  | $cmd_sort - \
+  | $cmd_uniq - \
+  | $cmd_crontab -
+  check_status "$?"
+}
+
+get_mysql_details() {
+  # This function asks the user for the user/host details for the database
+
+  local mysql_log_file="${2:-/var/log/mysqld.log}"
+  local sql_root_pass=""
+
+  local cmd_date=$(locate_cmd "date")
+  local cmd_shasum=$(locate_cmd "sha256sum")
+  local cmd_base64=$(locate_cmd "base64")
+  local cmd_head=$(locate_cmd "head")
+  local cmd_awk=$(locate_cmd "awk")
+  local cmd_chown=$(locate_cmd "chown")
+  local cmd_chmod=$(locate_cmd "chmod")
+
+  local confirmed="no"
+  local sql_homer_pass=$($cmd_date +%s | $cmd_shasum | $cmd_base64 | $cmd_head -c 15)
+
+  if [[ -f $mysql_log_file ]]; then
+    sql_root_pass=$($cmd_awk '/A temporary password is generated for root/ {print $NF}' $mysql_log_file)
+    if [[ -z "$sql_root_pass" ]]; then
+      echo "ERROR: Cannot locate temporory root password, aborting."
+      echo "       Please check the logs and correct manually"
+      exit 1
+    fi
+    DB_ADMIN_TEMP_PASS=$sql_root_pass
+  fi
+
+  while [[ x"$confirmed"x == x"no"x ]]; do
+    read -p "Please enter the database hostname for HOMER: [default: '$DB_HOST'] " database_host
+    [[ -z "$database_host" ]] && database_host=$DB_HOST
+
+    read -p "Please enter the database username for HOMER: [default: '$DB_USER'] " homer_user_account
+    [[ -z "$homer_user_account" ]] && homer_user_account=$DB_USER
+
+    read -p "Please enter the password for HOMER username '$homer_user_account': [default: '$sql_homer_pass'] " homer_user_password
+    [[ -z "$homer_user_password" ]] && homer_user_password=$sql_homer_pass
+
+    read -p "Please enter the database superuser username: [default: '$DB_ADMIN_USER'] " admin_user_account
+    [[ -z "$admin_user_account" ]] && admin_user_account=$DB_ADMIN_USER
+
+    read -p "Please enter the password for database admin user '$DB_ADMIN_USER': " admin_user_password
+    [[ -z "$admin_user_password" ]] && admin_user_password=$sql_root_pass
+
+    echo ""
+    echo "  Database Host : $database_host"
+    echo ""
+    echo "  Homer Username: $homer_user_account"
+    echo "  Homer Password: $homer_user_password"
+    echo "  Admin Username: $admin_user_account"
+    echo "  Admin Password: $admin_user_password"
+    echo ""
+    read -p "Please confirm the above details are correct [Y/n]" confirmation
+
+    [[ -z "$confirmation" ]] && confirmation="y"
+    [[ x"$confirmation"x == x"y"x ]] && confirmed="yes"
+  done
+
+  DB_HOST=$database_host
+  DB_USER=$homer_user_account
+  DB_PASS=$homer_user_password
+  DB_ADMIN_USER=$admin_user_account
+  DB_ADMIN_PASS=$admin_user_password
+
+  (
+    echo "Mysql Homer Username: $DB_USER"
+    echo "Mysql Homer Password: $DB_PASS"
+    echo "Mysql Admin Username: $DB_ADMIN_USER"
+    echo "Mysql Admin Password: $DB_ADMIN_PASS"
+    echo "Mysql Admin Temp Password: $DB_ADMIN_TEMP_PASS"
+    echo "Mysql Database Host : $DB_HOST"
+  ) > ~root/homer_installer_user_details
+  $cmd_chmod 0600 ~/homer_installer_user_details
+  $cmd_chown root:root ~/homer_installer_user_details
+}
+
+mysql_ready() {
+  # This function checks to see if mysql is running and accepting connections
+
+  local use_password="${1:-yes}"
+  local connect_timeout="${2:-3}"
+  local retries="${3:-3}"
+  local tries=1
+  local sleep_time=2
+  local mysql_params="--user=$DB_ADMIN_USER --host=$DB_HOST --silent --connect-timeout=$connect_timeout"
+
+  local cmd_mysqladmin=$(locate_cmd "mysqladmin")
+  local cmd_sleep=$(locate_cmd "sleep")
+
+  if [[ x"$use_password"x == x"yes"x ]]; then
+    mysql_params="$mysql_params --password=$DB_ADMIN_TEMP_PASS"
+  fi
+
+  while [[ "$tries" -le "$retries" ]]; do
+    $cmd_mysqladmin $mysql_params ping 2>/dev/null
+
+    if [[ $? == 0 ]]; then
+      return 0
+    fi
+
+    $cmd_sleep "$sleep_time"
+    tries=$((tries + 1))
+  done
+
+  return 1
+}
+
+mysql_secure() {
+  # This function sets the database superuser password to that of the password given
+  # by the user in a previous step, it then goes and "secures" mysql in a similar 
+  # fashion to that of "mysql_secure_installtion"
+
+  local use_password="${1:-yes}"
+  local mysql_params="--user=$DB_ADMIN_USER --host=$DB_HOST"
+  local -a mysql_cmds=(
+                        "UPDATE mysql.user SET authentication_string=PASSWORD('$DB_ADMIN_PASS') WHERE User='$DB_ADMIN_USER';" \
+                        "DELETE FROM mysql.user WHERE User='$DB_ADMIN_USER' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" \
+                        "DELETE FROM mysql.user WHERE User='';" \
+                        "DROP DATABASE IF EXISTS test;" \
+                        "FLUSH PRIVILEGES;"
+                      )
+
+  local cmd_mysql=$(locate_cmd "mysql")
+
+  if [[ x"$use_password"x == x"yes"x ]]; then
+    $cmd_mysql $mysql_params --password="$DB_ADMIN_TEMP_PASS" --connect-expired-password -e \
+      "ALTER USER USER() IDENTIFIED BY '$DB_ADMIN_PASS';"
+    check_status "$?"
+  else
+    $cmd_mysql $mysql_params -e \
+      "ALTER USER USER() IDENTIFIED BY '$DB_ADMIN_PASS';"
+    check_status "$?"
+  fi
+
+  for cmd in "${mysql_cmds[@]}"; do
+    $cmd_mysql $mysql_params --password="$DB_ADMIN_PASS" -e "$cmd"
+    check_status "$?"
+  done
+}
+
+mysql_load() {
+  # This function creates the homer user and then loads the default data
+  # into the database
+
+  local mysql_ddl_dir="${1:-$src_base_dir/$src_homer_api_dir/sql/mysql}"
+  local mysql_data_dir="${2:-/var/lib/mysql}"
+  local lower_mysql_pass_validation="${3:-no}"
+  local -a mysql_ddl=(
+                       "|$mysql_ddl_dir/homer_databases.sql" \
+                       "homer_data|$mysql_ddl_dir/schema_data.sql" \
+                       "homer_configuration|$mysql_ddl_dir/schema_configuration.sql" \
+                       "homer_statistic|$mysql_ddl_dir/schema_statistic.sql"
+                     )
+
+  local cmd_printf=$(locate_cmd "printf")
+  local cmd_chown=$(locate_cmd "chown")
+  local cmd_chmod=$(locate_cmd "chmod")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_mysql=$(locate_cmd "mysql")
+
+  if [[ x"$lower_mysql_pass_validation"x == x"yes"x ]]; then
+    $cmd_mysql --user="$DB_ADMIN_USER" --password="$DB_ADMIN_PASS" -e \
+      "SET GLOBAL validate_password_policy=LOW;"
+    check_status "$?"
+    echo "validate_password_policy=LOW" >> /etc/my.cnf
+  fi
+
+  $cmd_mysql --user="$DB_ADMIN_USER" --password="$DB_ADMIN_PASS" -e \
+    "GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;"
+  check_status "$?"
+
+  # Fixup passwords to get rid of mysql low policy errors
+  $cmd_sed -i -e "s/test123/test1234/g" -e "s/123test/1234test/g" $mysql_ddl_dir/schema_configuration.sql
+
+  local original_ifs=$IFS
+  IFS=$'|'
+  for db_ddl in "${mysql_ddl[@]}"; do
+    read -r db ddl <<< "$db_ddl"
+    $cmd_mysql --user="$DB_USER" --password="$DB_PASS" "$db" < "$ddl"
+    check_status "$?"
+  done
+  IFS=$original_ifs
+
+  $cmd_mysql --user="$DB_USER" --password="$DB_PASS" homer_configuration -e \
+    "DELETE FROM node;"
+  check_status "$?"
+
+  $cmd_mysql --user="$DB_USER" --password="$DB_PASS" homer_configuration -e \
+    "ALTER TABLE node AUTO_INCREMENT = 1;"
+  check_status "$?"
+
+  $cmd_mysql --user="$DB_USER" --password="$DB_PASS" homer_configuration -e \
+    "INSERT INTO node VALUES(default,'$DB_HOST','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
+  check_status "$?"
+
+  echo "Homer initial data load complete" > "$mysql_data_dir/.homer_initialized"
+
+}
+
+config_search_and_replace() {
+  # This function updates the configuration files to reflect the correct
+  # user details for connecting to the database by the apps. It also updates
+  # supporting confirguration files for custom settings.
+
+  local cmd_sed=$(locate_cmd "sed")
+
+  # Maintenance Scripts
+  $cmd_sed -i \
+    -e "s/homer_user/$DB_USER/g" \
+    -e "s/homer_password/$DB_PASS/g" \
+    "$mnt_script_dir/rotation.ini" \
+    "$mnt_script_dir/homer_rotate"
+
+  # Homer configuration
+  $cmd_sed -i \
+    -e "s/{{ DB_USER }}/$DB_USER/g" \
+    -e "s/{{ DB_PASS }}/$DB_PASS/g" \
+    -e "s/{{ DB_HOST }}/$DB_HOST/g" \
+    "$web_doc_root/api/configuration.php"
+
+  # Kamailio Scripts
+  $cmd_sed -i \
+    -e "s/homer_user/$DB_USER/g" \
+    -e "s/homer_password/$DB_PASS/g" \
+    -e "s/127\.0\.0\.1/$DB_HOST/g" \
+    -e "s/9060/$LISTEN_PORT/g" \
+    /etc/kamailio/kamailio.cfg
+
+  # Apache docroot
+  $cmd_sed -i \
+    -e "s|^\(.*DocumentRoot\).*|\1 $web_doc_root|g" \
+    $web_cfg_root/sipcapture.conf
+}
+
+banner_start() {
+  # This is the banner displayed at the start of script execution
+
+  clear;
+  echo "**************************************************************"
+  echo "                                                              "
+  echo "      ,;;;;;,       HOMER SIP CAPTURE (http://sipcapture.org) "
+  echo "     ;;;;;;;;;.     Single-Node Auto-Installer (beta $VERSION)"
+  echo "   ;;;;;;;;;;;;;                                              "
+  echo "  ;;;;  ;;;  ;;;;   <--------------- INVITE ---------------   "
+  echo "  ;;;;  ;;;  ;;;;    --------------- 200 OK --------------->  "
+  echo "  ;;;;  ...  ;;;;                                             "
+  echo "  ;;;;       ;;;;   WARNING: This installer is intended for   "
+  echo "  ;;;;  ;;;  ;;;;   dedicated/vanilla OS setups without any   "
+  echo "  ,;;;  ;;;  ;;;;   customization and with default settings   "
+  echo "   ;;;;;;;;;;;;;                                              "
+  echo "    :;;;;;;;;;;     THIS SCRIPT IS PROVIDED AS-IS, USE AT     "
+  echo "     ^;;;;;;;^      YOUR *OWN* RISK, REVIEW LICENSE & DOCS    "
+  echo "                                                              "
+  echo "**************************************************************"
+  echo;
+}
+
+banner_end() {
+  # This is the banner displayed at the end of script execution
+
+  local cmd_ip=$(locate_cmd "ip")
+  local cmd_head=$(locate_cmd "head")
+  local cmd_cut=$(locate_cmd "cut")
+
+  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d' ' -f8)
+
+  echo "*************************************************************"
+  echo "      ,;;;;,                                                 "
+  echo "     ;;;;;;;;.     Congratulations! HOMER has been installed!"
+  echo "   ;;;;;;;;;;;;                                              "
+  echo "  ;;;;  ;;  ;;;;   <--------------- INVITE ---------------   "
+  echo "  ;;;;  ;;  ;;;;    --------------- 200 OK --------------->  "
+  echo "  ;;;;  ..  ;;;;                                             "
+  echo "  ;;;;      ;;;;   Your system should be now ready to rock!"
+  echo "  ;;;;  ;;  ;;;;   Please verify/complete the configuration  "
+  echo "  ,;;;  ;;  ;;;;   files generated by the installer below.   "
+  echo "   ;;;;;;;;;;;;                                              "
+  echo "    :;;;;;;;;;     THIS SCRIPT IS PROVIDED AS-IS, USE AT     "
+  echo "     ;;;;;;;;      YOUR *OWN* RISK, REVIEW LICENSE & DOCS    "
+  echo "                                                             "
+  echo "*************************************************************"
+  echo
+  echo "     * Verify configuration for HOMER-API:"
+  echo "         '$WEB_ROOT/api/configuration.php'"
+  echo "         '$WEB_ROOT/api/preferences.php'"
+  echo
+  echo "     * Verify capture settings for Homer/Kamailio:"
+  echo "         '/etc/kamailio/kamailio.cfg'"
+  echo
+  echo "     * Start/stop Homer SIP Capture:"
+  echo "         '/sbin/kamctl start|stop'"
+  echo
+  echo "     * Access HOMER UI:"
+  echo "         http://$my_primary_ip"
+  echo "         [default: admin/test1234]"
+  echo
+  echo "     * Send HEP/EEP Encapsulated Packets:"
+  echo "         hep://$my_primary_ip:$LISTEN_PORT"
+  echo
+  echo "**************************************************************"
+  echo
+  echo " IMPORTANT: Do not forget to send Homer node some traffic! ;) "
+  echo " For our capture agents, visit http://github.com/sipcapture "
+  echo " For more help and information visit: http://sipcapture.org "
+  echo
+  echo "**************************************************************"
+  echo " Installer Log saved to: $logfile "
+  echo
+}
+
+start_app() {
+  # This is the main app
+
+  banner_start
+
+  if ! is_root_user; then
+    echo "ERROR: You must be the root user. Exiting..." 2>&1
+    echo  2>&1
+    exit 1
+  fi
+
+  if ! is_supported_os "$OSTYPE"; then
     echo "ERROR:"
     echo "Sorry, this Installer does not support your OS yet!"
     echo "Please follow instructions in the HOW-TO for manual installation & setup"
     echo "available at http://sipcapture.org"
     echo
     exit 1
-fi
-
-
-read -p "This script expect a Vanilla OS and will override settings. Continue (y/N)? " choice
-case "$choice" in 
-  y|Y ) echo "Proceeding...";;
-  n|N ) echo "Exiting" && exit 1;;
-  * ) echo "invalid" && exit 1 ;;
-esac
-
-# Setup Kamailio/Sipcapture from Packages
-echo
-echo "**************************************************************"
-echo " INSTALLING OS PACKAGES AND DEPENDENCIES FOR HOMER SIPCAPTURE"
-echo "**************************************************************"
-echo
-echo "This might take a while depending on system/network speed. Please stand by...."
-echo
-
-case $DIST in
-    'DEBIAN')
-	   WEBROOT="/var/www/html/"
-	   WEBSERV="apache2"
-	   MYSQL="mysql"
-		# General
-		export DEBIAN_FRONTEND=noninteractive
-		export LANG=en_US.utf8
-		export LC_ALL="en_US.UTF-8"
-		locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
-		apt-get update -qq
-		apt-get install --no-install-recommends --no-install-suggests -yqq ca-certificates apache2 libapache2-mod-php5 php5 php5-cli php5-gd php-pear php5-dev php5-mysql php5-json php-services-json git wget pwgen
-		#enable apache mod_php and mod_rewrite
-		a2enmod php5
-		a2enmod rewrite 
-	        # Generate Certificates if not present
-	        if [ ! -f "/etc/ssl/localcerts/apache.key" ]; then
-	          mkdir -p /etc/ssl/localcerts
-	          openssl req -new -x509 -days 365 -nodes -out /etc/ssl/localcerts/apache.pem -keyout /etc/ssl/localcerts/apache.key
-	          chmod 600 /etc/ssl/localcerts/apache*
-	        fi
-	        # activate ssl
-	        a2enmod ssl
-
-
-		# MySQL
-		apt-get install -y perl libdbi-perl libclass-dbi-mysql-perl --no-install-recommends
-		apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys A4A9406876FCBD3C456770C88C718D3B5072E1F5
-		echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list
-		apt-get update && apt-get install -y mysql-server libmysqlclient18
-		# Kamailio + sipcapture module
-		apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xfb40d3e6508ea4c8
-		echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio.list
-		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio.list
-		apt-get update && apt-get install -f -yqq kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules geoip-database geoip-database-extra
-
-
-		cd /usr/src/
-		if [ ! -d "/usr/src/homer-api" ]; then
-		   echo "GIT: Cloning Homer components..."
-		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
-			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/sipcapture/homer-config.git homer-config
-			chmod +x /usr/src/homer-api/scripts/mysql/*
-			cp /usr/src/homer-api/scripts/mysql/* /opt/
-			ln -s /opt/homer_mysql_rotate /opt/homer_rotate
-		else
-			echo "GIT: Updating Homer components..."
-		   	cd homer-api; git pull; cd ..
-		   	cd homer-ui; git pull; cd ..
-		   	cd homer-config; git pull; cd ..
-			#copy any newly updated scripts
-			chmod +x /usr/src/homer-api/scripts/mysql/*
-			cp /usr/src/homer-api/scripts/mysql/* /opt/
-			ln -s /opt/homer_mysql_rotate /opt/homer_rotate
-		fi
-
-			cp -R /usr/src/homer-ui/* $WEBROOT/
-			cp -R /usr/src/homer-api/api $WEBROOT/
-			chown -R www-data:www-data $WEBROOT/store/
-			chmod -R 0775 $WEBROOT/store/dashboard
-
-			SQL_LOCATION=/usr/src/homer-api/sql/mysql
-
-			cp /usr/src/homer-config/docker/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-config/docker/vhost.conf /etc/apache2/sites-enabled/000-default.conf
-
-			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio /etc/kamailio/kamailio.cfg
-			chmod 775 /etc/kamailio/kamailio.cfg
-
-			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
-
-		# Handy-dandy MySQL run function
-		function MYSQL_RUN () {
-
-		  echo 'Starting mysqld'
-		  /etc/init.d/mysql start
-		  #echo 'Waiting for mysqld to come online'
-		  while [ ! -x /var/run/mysqld/mysqld.sock ]; do
-		      sleep 1
-		  done
-
-		}
-
-		# MySQL data loading function
-		function MYSQL_INITIAL_DATA_LOAD () {
-
-		  echo "Enter the SQL User details for the HOMER Client:"
-	   	  echo "MYSQL Homer User: (empty for default)"
-	   	  read sqlhomeruser
-	   	  echo "MYSQL Homer Pass: (empty for randomized)"
-	   	  stty -echo
-	   	  read sqlhomerpassword
-		  echo "WARNING: Choose a password for MySQL ROOT account (empty by default!)"
-	   	  stty -echo
-	   	  read sqlpassword
-	   	  stty echo
-
-		  if [ "$sqlhomeruser" = "" ] ; then
-   			echo "Using default username..."
-   			sqlhomeruser="homer"
-		  	DB_USER="$sqlhomeruser"
-   		  fi
-   		  
-   		  if [ "$sqlhomerpassword" = "" ] ; then
-   			echo "Using random password... "
-   			sqlhomerpassword=$(cat /dev/urandom|tr -dc "a-zA-Z0-9"|fold -w 9|head -n 1)
-   		  fi
-
-		  DB_USER="$sqlhomeruser"
-		  DB_PASS="$sqlhomerpassword"
-		  DATADIR=/var/lib/mysql
-
-		  echo "Beginning initial data load...."
-
-		  #chown -R mysql:mysql "$DATADIR"
-		  #mysql_install_db --user=mysql --datadir="$DATADIR"
-
-		  MYSQL_RUN
-
-		  echo "Creating Databases..."
-		  mysql -u "$sqluser" < $SQL_LOCATION/homer_databases.sql
-		  # mysql -u "$sqluser" < $SQL_LOCATION/homer_user.sql
-
-		  echo "Creating Tables..."
-		  mysql -u "$sqluser" homer_data < $SQL_LOCATION/schema_data.sql
-		  # patch password for centos
-		  # perl -p -i -e "s/test123/test1234/" $SQL_LOCATION/schema_configuration.sql
-		  mysql -u "$sqluser" homer_configuration < $SQL_LOCATION/schema_configuration.sql
-		  mysql -u "$sqluser" homer_statistic < $SQL_LOCATION/schema_statistic.sql
-
-		  # echo "Creating local DB Node..."
-		  mysql -u "$sqluser" homer_configuration -e "INSERT INTO node VALUES(1,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
-
-		  echo 'Setting root password....'
-		  mysql -u "$sqluser" -e "GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;";
-		  if [ "$sqlhomerpassword" = "" ] ; then
-			echo "WARNING! MySQL root password is empty and insecure!"
-		  else 
-		  	mysql -u "$sqluser" -e "SET PASSWORD = PASSWORD('$sqlpassword');" 
-		  fi
-
-		  echo "Homer initial data load complete" > $DATADIR/.homer_initialized
-
-		}
-
-		# Initialize Database
-		MYSQL_INITIAL_DATA_LOAD
-
-		# HOMER API CONFIG
-		echo "Patching Homer configuration..."
-		PATH_HOMER_CONFIG=$WEBROOT/api/configuration.php
-		chmod 775 $PATH_HOMER_CONFIG
-
-		# Patch rotation script auth
-		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
-		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
-		perl -p -i -e "s/homer_user/$DB_USER/" /opt/rotation.ini
-		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
-		
-		# Replace values in template
-		perl -p -i -e "s/homer_password/$DB_PASS/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/127\.0\.0\.1/$DB_HOST/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/homer_user/$DB_USER/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
-		
-		# Set Permissions for webapp
-		mkdir $WEBROOT/api/tmp
-		chmod -R 0777 $WEBROOT/api/tmp/
-		chmod -R 0775 $WEBROOT/store/dashboard*
-
-		# Reconfigure SQL rotation
-    		export PATH_ROTATION_SCRIPT=/opt/homer_rotate
-    		chmod 775 $PATH_ROTATION_SCRIPT
-    		chmod +x $PATH_ROTATION_SCRIPT
-    		perl -p -i -e "s/homer_user/$sqlhomeruser/" $PATH_ROTATION_SCRIPT
-    		perl -p -i -e "s/homer_password/$sqlhomerpassword/" $PATH_ROTATION_SCRIPT
-    		# Init rotation
-    		/opt/homer_rotate > /dev/null 2>&1
-
-		# KAMAILIO
-		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio $PATH_KAMAILIO_CFG
-
-		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
-		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
-
-		sed -i -e "s/#RUN_KAMAILIO/RUN_KAMAILIO/g" /etc/default/kamailio
-		sed -i -e "s/#CFGFILE/CFGFILE/g" /etc/default/kamailio
-		sed -i -e "s/#USER/USER/g" /etc/default/kamailio
-		sed -i -e "s/#GROUP/GROUP/g" /etc/default/kamailio
-
-		# Test the syntax.
-		# kamailio -c $PATH_KAMAILIO_CFG
-
-		# Start Apache
-		# apachectl -DFOREGROUND
-		update-rc.d apache2 enable
-		/etc/init.d/apache2 restart
-
-		# It's Homer time!
-		update-rc.d kamailio enable
-		/etc/init.d/kamailio restart
-
-		;;
-
-    'CENTOS')
-	   WEBROOT="/var/www/html/"
-	   WEBSERV="httpd"
-	   MYSQL="mysqld"
-	   yum -y install wget
-           COMMON_PKGS=" autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils make gcc gcc-c++ gettext-devel gnutls-devel openssl openssl-devel openssl-devel mod_ssl perl patch unzip wget zip zlib zlib-devel bison flex pcre-devel libxml2-devel sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
-	   VERS=$(cat /etc/redhat-release |cut -d' ' -f4 |cut -d'.' -f1)
-	   if [ "$VERS" = "6" ]; then
-		wget http://dev.mysql.com/get/mysql57-community-release-el6-7.noarch.rpm
-		yum -y localinstall mysql57-community-release-el6-7.noarch.rpm
-		       if [ ! "$?" == "0" ]; then
-		   	echo 
-		   	echo "HALT! Something went wrong. Please resolve the errors above and try again."
-		   	exit 1
-		       fi
-		wget http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_6/home:kamailio:v4.4.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
-
-           elif [ "$VERS" = "7" ]; then
-		wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
-		yum -y localinstall mysql57-community-release-el7-7.noarch.rpm
-		       if [ ! "$?" == "0" ]; then
-		   	echo 
-		   	echo "HALT! Something went wrong. Please resolve the errors above and try again."
-		   	exit 1
-		       fi
-		wget http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
-	   fi
-	   yum -y update
-	   yum -y install $COMMON_PKGS libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server kamailio rsyslog kamailio-outbound kamailio-sctp kamailio-tls kamailio-websocket kamailio-jansson kamailio-mysql
-           chkconfig mysqld on
-           chkconfig httpd on
-	   chkconfig kamailio on
-
-	   # HOMER GIT
-		cd /usr/src/
-		if [ ! -d "/usr/src/homer-api" ]; then
-		   echo "GIT: Cloning Homer components..."
-		   	git clone --depth 1 https://github.com/sipcapture/homer-api.git homer-api
-			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
-			git clone --depth 1 https://github.com/sipcapture/homer-config.git homer-config
-			chmod +x /usr/src/homer-api/scripts/mysql/*
-			cp /usr/src/homer-api/scripts/mysql/* /opt/
-			ln -s /opt/homer_mysql_rotate /opt/homer_rotate
-		else
-			echo "GIT: Updating Homer components..."
-		   	cd homer-api; git pull; cd ..
-		   	cd homer-ui; git pull; cd ..
-		   	cd homer-config; git pull; cd ..
-			#copy any newly updated scripts
-			chmod +x /usr/src/homer-api/scripts/mysql/*
-			cp /usr/src/homer-api/scripts/mysql/* /opt/
-			ln -s /opt/homer_mysql_rotate /opt/homer_rotate
-		fi
-
-			cp -R /usr/src/homer-ui/* $WEBROOT/
-			cp -R /usr/src/homer-api/api $WEBROOT/
-			chown -R apache:apache $WEBROOT/store/
-			chmod -R 0775 $WEBROOT/store/dashboard
-
-			SQL_LOCATION=/usr/src/homer-api/sql/mysql
-
-			cp /usr/src/homer-config/docker/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-config/docker/preferences.php $WEBROOT/api/preferences.php
-			cp /usr/src/homer-config/docker/vhost.conf /etc/httpd/conf.d/sipcapture.conf
-			#Kamailio 4 config
-			cp /usr/src/homer-config/sipcapture/sipcapture.kamailio /etc/kamailio/kamailio.cfg
-			chmod 775 /etc/kamailio/kamailio.cfg
-
-			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | crontab -
-
-		# Handy-dandy MySQL run function
-                function MYSQL_RUN () {
-
-                  echo 'Starting mysqld'
-                  service mysqld start
-                  echo 'Waiting for mysqld to start...'
-                  while [ ! -x /var/lib/mysql/mysql.sock ]; do
-                      sleep 1
-                  done
-               	}
-
-                # MySQL data loading function
-                function MYSQL_INITIAL_DATA_LOAD () {
-
-                  MYSQL_RUN
-
-                  sqlpassword=$(grep 'temporary password' /var/log/mysqld.log | awk '{ print $(NF) }')
-                  echo "Starting mysql secure installation [ $sqlpassword ] "
-                  echo "Please follow the prompts: "
-                  sudo mysql_secure_installation -p"$sqlpassword"  --use-default
-		  echo "------------"
-		  echo
-                        read -p "Please provide MYSQL root password: " sqlpassword
-                        while ! mysql -u root -p$sqlpassword  -e ";" ; do
-                               read -p "Can't connect, please try again: " sqlpassword
-                       	done
-
-                       	echo "Generating homer mysql user..."
-                        sqlhomeruser="homer"
-                        DB_USER="$sqlhomeruser"
-                        # echo "Using random password... "
-                        sqlhomerpassword=$(cat /dev/urandom|tr -dc "a-zA-Z0-9"|fold -w 9|head -n 1)
-                        DB_PASS="$sqlhomerpassword"
-
-                  DATADIR=/var/lib/mysql
-
-
-		  echo "Beginning initial data load...."
-
-		  #chown -R mysql:mysql "$DATADIR"
-		  #mysql_install_db --user=mysql --datadir="$DATADIR"
-
-		  MYSQL_RUN
-
-		  mysql -u "$sqluser" -p"$sqlpassword" -e "SET GLOBAL validate_password_policy=LOW; GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;";
-
-		  echo "Creating Databases..."
-		  mysql -u "$DB_USER" -p"$DB_PASS" < $SQL_LOCATION/homer_databases.sql
-		  # mysql -u "$DB_USER" -p"$DB_PASS" < $SQL_LOCATION/homer_user.sql
-
-		  echo "Creating Tables..."
-		  mysql -u "$DB_USER" -p"$DB_PASS" homer_data < $SQL_LOCATION/schema_data.sql
-
-		  # patch password for centos min policy
-		  perl -p -i -e "s/test123/test1234/" $SQL_LOCATION/schema_configuration.sql
-		  perl -p -i -e "s/123test/1234test/" $SQL_LOCATION/schema_configuration.sql
-
-		  mysql -u "$DB_USER" -p"$DB_PASS" homer_configuration < $SQL_LOCATION/schema_configuration.sql
-		  mysql -u "$DB_USER" -p"$DB_PASS" homer_statistic < $SQL_LOCATION/schema_statistic.sql
-
-		  # echo "Creating local DB Node..."
-		  mysql -u "$DB_USER" -p"$DB_PASS" homer_configuration -e "INSERT INTO node VALUES(default,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
-
-		  echo "Homer initial data load complete" > $DATADIR/.homer_initialized
-
-		}
-
-		# Initialize Database
-		MYSQL_INITIAL_DATA_LOAD
-
-		# HOMER API CONFIG
-		echo "Patching Homer configuration..."
-		PATH_HOMER_CONFIG=$WEBROOT/api/configuration.php
-		chmod 775 $PATH_HOMER_CONFIG
-		
-		# Patch rotation script auth
-		perl -p -i -e "s/homer_user/$DB_USER/" /opt/homer_rotate
-		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/homer_rotate
-		perl -p -i -e "s/homer_user/$DB_USER/" /opt/rotation.ini
-		perl -p -i -e "s/homer_password/$DB_PASS/" /opt/rotation.ini
-		# Patch rotation script mysql socket location
-		perl -p -i -e "s/lib\/mysql/var\/mysqld/" /opt/rotation.ini
-
-		# Replace values in template
-		perl -p -i -e "s/homer_password/$DB_PASS/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/127\.0\.0\.1/$DB_HOST/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/homer_user/$DB_USER/" $PATH_HOMER_CONFIG
-		perl -p -i -e "s/9060/$LISTEN_PORT/" $PATH_KAMAILIO_CFG
-		
-		# API talks to localhost on CentOS
-		perl -p -i -e "s/127.0.0.1/localhost/" $PATH_HOMER_CONFIG
-
-		# Set Permissions for webapp
-		mkdir $WEBROOT/api/tmp
-		chmod -R 0777 $WEBROOT/api/tmp/
-		chmod -R 0775 $WEBROOT/store/dashboard*
-
-		# Reconfigure SQL rotation
-    		export PATH_ROTATION_SCRIPT=/opt/homer_rotate
-    		chmod 775 $PATH_ROTATION_SCRIPT
-    		chmod +x $PATH_ROTATION_SCRIPT
-    		perl -p -i -e "s/homer_user/$sqlhomeruser/" $PATH_ROTATION_SCRIPT
-    		perl -p -i -e "s/homer_password/$sqlhomerpassword/" $PATH_ROTATION_SCRIPT
-    		# Init rotation
-    		/opt/homer_rotate > /dev/null 2>&1
-
-		# KAMAILIO
-		export PATH_KAMAILIO_CFG=/etc/kamailio/kamailio.cfg
-		cp /usr/src/homer-config/sipcapture/sipcapture.kamailio $PATH_KAMAILIO_CFG
-
-		awk '/max_while_loops=100/{print $0 RS "mpath=\"//usr/lib/x86_64-linux-gnu/kamailio/modules/\"";next}1' $PATH_KAMAILIO_CFG >> $PATH_KAMAILIO_CFG.tmp | 2&>1 >/dev/null
-		mv $PATH_KAMAILIO_CFG.tmp $PATH_KAMAILIO_CFG
-		# Create SymLink for modules
-		ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
-
-		sed -i -e "s/#RUN_KAMAILIO/RUN_KAMAILIO/g" /etc/default/kamailio
-		sed -i -e "s/#CFGFILE/CFGFILE/g" /etc/default/kamailio
-		sed -i -e "s/#USER/USER/g" /etc/default/kamailio
-		sed -i -e "s/#GROUP/GROUP/g" /etc/default/kamailio
-
-		# Allow HTTPD + Kamailio ports
-		firewall-cmd --add-service=http --add-service=https
-		firewall-cmd --add-port=9060/udp
-		firewall-cmd --add-port=9060/tcp
-		firewall-cmd --runtime-to-permanent
-
-		# Test the syntax.
-		# kamailio -c $PATH_KAMAILIO_CFG
-
-		# Start Apache
-		# apachectl -DFOREGROUND
-		service httpd restart
-
-		# It's Homer time!
-		service kamailio restart
-
-	   ;;
-esac
-
-
-# Install Complete
-#clear
-echo "*************************************************************"
-echo "      ,;;;;,                                                 "
-echo "     ;;;;;;;;.     Congratulations! HOMER has been installed!"
-echo "   ;;;;;;;;;;;;                                              "
-echo "  ;;;;  ;;  ;;;;   <--------------- INVITE ---------------   "
-echo "  ;;;;  ;;  ;;;;    --------------- 200 OK --------------->  "
-echo "  ;;;;  ..  ;;;;                                             " 
-echo "  ;;;;      ;;;;   Your system should be now ready to rock!"
-echo "  ;;;;  ;;  ;;;;   Please verify/complete the configuration  "
-echo "  ,;;;  ;;  ;;;;   files generated by the installer below.   "
-echo "   ;;;;;;;;;;;;                                              "
-echo "    :;;;;;;;;;     THIS SCRIPT IS PROVIDED AS-IS, USE AT     "
-echo "     ;;;;;;;;      YOUR *OWN* RISK, REVIEW LICENSE & DOCS    "
-echo "                                                             "
-echo "*************************************************************"
-echo
-echo "     * Verify configuration for HOMER-API:"
-echo "         '$WEBROOT/api/configuration.php'"
-echo "         '$WEBROOT/api/preferences.php'"
-echo
-echo "     * Verify capture settings for Homer/Kamailio:"
-echo "         '$REAL_PATH/etc/kamailio/kamailio.cfg'"
-echo
-echo "     * Start/stop Homer SIP Capture:"
-echo "         '$REAL_PATH/sbin/kamctl start|stop'"
-echo
-echo "     * Access HOMER UI:"
-echo "         http://$LOCAL_IP or http://$LOCAL_IP"
-echo "         [default: admin/test123 or test1234]"
-echo
-echo "     * Send HEP/EEP Encapsulated Packets:"
-echo "         hep://$LOCAL_IP:$LISTEN_PORT"
-echo
-echo "**************************************************************"
-echo
-echo " IMPORTANT: Do not forget to send Homer node some traffic! ;) "
-echo " For our capture agents, visit http://github.com/sipcapture "
-echo " For more help and information visit: http://sipcapture.org "
-echo
-echo "**************************************************************"
-echo " Installer Log saved to: $logfile "
-echo 
-exit 0
+  else
+    unalias cp 2>/dev/null
+    $SETUP_ENTRYPOINT
+    banner_end
+  fi
+  exit 0
+}
+
+setup_centos_7() {
+  # This is the main entrypoint for setup of sipcapture/homer on a CentOS 7
+  # system
+
+  local base_pkg_list="wget autoconf automake bzip2 cpio curl curl-devel \
+                       expat-devel fileutils make gcc gcc-c++ gettext-devel \
+                       gnutls-devel openssl openssl-devel mod_ssl perl patch rsyslog \
+                       unzip zip zlib zlib-devel bison flex pcre-devel libxml2-devel \
+                       sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
+  local kamailio_pkg_list="kamailio kamailio-outbound kamailio-sctp kamailio-tls \
+                           kamailio-websocket kamailio-jansson kamailio-mysql"
+  local mysql_pkg_list="libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server mysql-community-client"
+  local -a service_names=("mysqld" "kamailio" "httpd")
+  local web_cfg_root="/etc/httpd/conf.d"
+  local web_doc_root="/var/www/html/homer"
+  WEB_ROOT=$web_doc_root # WEB_ROOT used in banner_end function
+  local web_ownership="apache:apache"
+  local mnt_script_dir="/opt/homer"
+  local src_base_dir="/usr/src"
+  local src_homer_ui_dir="homer-ui"
+  local src_homer_api_dir="homer-api"
+  local src_homer_config_dir="homer-config"
+
+  local cmd_yum=$(locate_cmd "yum")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_chkconfig=$(locate_cmd "chkconfig")
+  local cmd_service=$(locate_cmd "service")
+
+  $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
+  # check_status "$?"
+
+  $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
+    "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo"
+  check_status "$?"
+
+  $cmd_yum clean all; $cmd_yum makecache
+
+  $cmd_yum -y update
+  check_status "$?"
+
+  $cmd_yum -y install $base_pkg_list $kamailio_pkg_list $mysql_pkg_list
+  # check_status "$?"
+
+  for svc in ${service_names[@]}; do
+    $cmd_chkconfig "$svc" on
+  done
+
+  repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
+  repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
+  repo_clone_or_update "$src_base_dir" "$src_homer_config_dir" "https://github.com/sipcapture/homer-config.git"
+
+  create_or_update_dir "$src_base_dir/$src_homer_ui_dir" "$web_doc_root"
+  create_or_update_dir "$src_base_dir/$src_homer_api_dir/api" "$web_doc_root/api"
+  create_or_update_maintenance_scripts "$src_base_dir/$src_homer_api_dir/scripts" "$mnt_script_dir" "mysql"
+  create_or_update_misc
+  create_or_update_config
+  create_or_update_cron
+
+  $cmd_service mysqld start
+  get_mysql_details
+
+  if ! mysql_ready; then
+    echo "ERROR: mysql does not appear to be running and/or available, aborting"
+    echo "       please check the logs and correct the issue"
+    exit 1
+  fi
+
+  mysql_secure
+  mysql_load "" "" "yes"
+
+  config_search_and_replace
+  /opt/homer/homer_rotate
+
+  for svc in ${service_names[@]}; do
+    $cmd_service "$svc" restart
+  done
+}
+
+setup_debian_8() {
+  # This is the main entrypoint for setup of sipcapture/homer on a Debian 8
+  # system
+
+  local base_pkg_list="ca-certificates apache2 libapache2-mod-php5 php5 \
+                       php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
+                       php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
+  local kamailio_pkg_list="kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules \
+                           kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules \
+                           kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules \
+                           geoip-database geoip-database-extra"
+  local mysql_pkg_list="mysql-server libmysqlclient18"
+  local -a service_names=("mysql" "kamailio" "apache2")
+  local -a repo_keys=(
+                       'kamailio44|FB40D3E6508EA4C8' \
+                       'mysql57|8C718D3B5072E1F5'
+                     )
+  local web_cfg_root="/etc/apache2/sites-available"
+  local web_doc_root="/var/www/html/homer"
+  WEB_ROOT=$web_doc_root # WEB_ROOT used in banner_end function
+  local web_ownership="www-data:www-data"
+  local mnt_script_dir="/opt/homer"
+  local src_base_dir="/usr/src"
+  local src_homer_ui_dir="homer-ui"
+  local src_homer_api_dir="homer-api"
+  local src_homer_config_dir="homer-config"
+
+  local cmd_apt_get=$(locate_cmd "apt-get")
+  local cmd_apt_key=$(locate_cmd "apt-key")
+  local cmd_service=$(locate_cmd "service")
+  local cmd_rm=$(locate_cmd "rm")
+  local cmd_ln=$(locate_cmd "ln")
+  local cmd_update_rcd=$(locate_cmd "update-rc.d")
+
+  echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list
+  echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list
+  echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list
+
+  local original_ifs=$IFS
+  IFS=$'|'
+  for key_info in "${repo_keys[@]}"; do
+    read -r repo key <<< "$key_info"
+    $cmd_apt_key adv --recv-keys --keyserver hkp://ha.pool.sks-keyservers.net:80 $key
+  done
+  IFS=$original_ifs
+
+  $cmd_apt_get update -qq
+  DEBIAN_FRONTEND=noninteractive $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq \
+    $base_pkg_list $kamailio_pkg_list $mysql_pkg_list
+
+  repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
+  repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
+  repo_clone_or_update "$src_base_dir" "$src_homer_config_dir" "https://github.com/sipcapture/homer-config.git"
+
+  create_or_update_dir "$src_base_dir/$src_homer_ui_dir" "$web_doc_root"
+  create_or_update_dir "$src_base_dir/$src_homer_api_dir/api" "$web_doc_root/api"
+  create_or_update_maintenance_scripts "$src_base_dir/$src_homer_api_dir/scripts" "$mnt_script_dir" "mysql"
+  create_or_update_misc
+  create_or_update_config
+  create_or_update_cron
+
+  if [[ -d /etc/apache2/sites-enabled ]]; then
+    $cmd_rm -rf /etc/apache2/sites-enabled/*
+    $cmd_ln -s -r $web_cfg_root/sipcapture.conf /etc/apache2/sites-enabled/sipcapture.conf
+  fi
+
+  $cmd_service mysql start
+  get_mysql_details
+
+  if ! mysql_ready "no"; then
+    echo "ERROR: mysql does not appear to be running and available, aborting"
+    echo "       please check the logs and correct the issue"
+    exit 1
+  fi
+
+  mysql_secure "no"
+  mysql_load
+
+  config_search_and_replace
+  /opt/homer/homer_rotate
+
+  if [[ -d /usr/lib/x86_64-linux-gnu/kamailio ]]; then
+    if [[ ! -e /usr/lib64 ]]; then
+      $cmd_ln -r -f -s /usr/lib /usr/lib64
+    fi
+    if [[ ! -e /usr/lib64/kamailio ]]; then
+      $cmd_ln -r -f -s /usr/lib/x86_64-linux-gnu/kamailio /usr/lib64/kamailio
+    fi
+  fi
+
+  local cmd_a2enmod=$(locate_cmd "a2enmod")
+  $cmd_a2enmod rewrite
+
+  for svc in ${service_names[@]}; do
+    $cmd_update_rcd $svc enable
+    $cmd_service "$svc" restart
+  done
+}
+
+######################################################################
+#
+# End of function definitions
+#
+######################################################################
+
+######################################################################
+#
+# Start of main script
+#
+######################################################################
+
+[[ "$0" == "$BASH_SOURCE" ]] && start_app
