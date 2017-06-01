@@ -153,7 +153,7 @@ detect_linux_distribution() {
   # If it is supported then the global variable SETUP_ENTRYPOINT is set to the 
   # function to be executed for the system setup
 
-  local cmd_lsb_release=$(locate_cmd "lsb_release") || exit $?
+  local cmd_lsb_release=$(locate_cmd "lsb_release")
   local distro_name=$($cmd_lsb_release -si)
   local distro_version=$($cmd_lsb_release -sr)
   DISTRO="$distro_name"
@@ -195,7 +195,7 @@ repo_clone_or_update() {
   local dest_dir=$2
   local git_repo=$3
   local git_branch=${4:-"origin/master"}
-  local cmd_git=$(locate_cmd "git") || exit $?
+  local cmd_git=$(locate_cmd "git")
 
   if [ -d "$base_dir" ]; then
     cd "$base_dir"
