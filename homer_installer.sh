@@ -350,7 +350,7 @@ create_or_update_cron() {
 
   ( 
     $cmd_crontab -l; \
-    echo "30 3 * * * /opt/homer/homer_rotate >> $cron_log 2>&1"
+    echo "30 3 * * * $mnt_script_dir/homer_rotate >> $cron_log 2>&1"
   ) \
   | $cmd_sort - \
   | $cmd_uniq - \
@@ -764,7 +764,7 @@ setup_centos_7() {
   mysql_load "" "" "yes"
 
   config_search_and_replace
-  /opt/homer/homer_rotate
+  $mnt_script_dir/homer_rotate
 
   for svc in ${service_names[@]}; do
     $cmd_service "$svc" restart
@@ -850,7 +850,7 @@ setup_debian_8() {
   mysql_load
 
   config_search_and_replace
-  /opt/homer/homer_rotate
+  $mnt_script_dir/homer_rotate
 
   if [[ -d /usr/lib/x86_64-linux-gnu/kamailio ]]; then
     if [[ ! -e /usr/lib64 ]]; then
