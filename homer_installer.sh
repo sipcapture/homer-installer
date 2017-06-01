@@ -153,7 +153,7 @@ detect_linux_distribution() {
   # If it is supported then the global variable SETUP_ENTRYPOINT is set to the 
   # function to be executed for the system setup
 
-  local cmd_lsb_release=$(locate_cmd "lsb_release") || exit $?
+  local cmd_lsb_release=$(locate_cmd "lsb_release")
   local distro_name=$($cmd_lsb_release -si)
   local distro_version=$($cmd_lsb_release -sr)
   DISTRO="$distro_name"
@@ -195,7 +195,7 @@ repo_clone_or_update() {
   local dest_dir=$2
   local git_repo=$3
   local git_branch=${4:-"origin/master"}
-  local cmd_git=$(locate_cmd "git") || exit $?
+  local cmd_git=$(locate_cmd "git")
 
   if [ -d "$base_dir" ]; then
     cd "$base_dir"
@@ -350,7 +350,7 @@ create_or_update_cron() {
 
   ( 
     $cmd_crontab -l; \
-    echo "30 3 * * * /opt/homer/homer_rotate >> $cron_log 2>&1"
+    echo "30 3 * * * $mnt_script_dir/homer_rotate >> $cron_log 2>&1"
   ) \
   | $cmd_sort - \
   | $cmd_uniq - \
@@ -764,7 +764,7 @@ setup_centos_7() {
   mysql_load "" "" "yes"
 
   config_search_and_replace
-  /opt/homer/homer_rotate
+  $mnt_script_dir/homer_rotate
 
   for svc in ${service_names[@]}; do
     $cmd_service "$svc" restart
@@ -850,7 +850,7 @@ setup_debian_8() {
   mysql_load
 
   config_search_and_replace
-  /opt/homer/homer_rotate
+  $mnt_script_dir/homer_rotate
 
   if [[ -d /usr/lib/x86_64-linux-gnu/kamailio ]]; then
     if [[ ! -e /usr/lib64 ]]; then
