@@ -34,6 +34,10 @@ chmod +x homer_installer.sh
 ./homer_installer.sh
 ```
 
+### Notes:
+CentOS
+* Ensure that the 'redhat-lsb-core' package is installed prior to running the installer.
+
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
 ### Developers
