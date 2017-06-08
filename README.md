@@ -35,58 +35,10 @@ chmod +x homer_installer.sh
 ./homer_installer.sh
 ```
 
-
 ![splitter](http://i.imgur.com/lytn4zn.png)
-
-## :package: Packages
-### :package: Debian 8 
-##### :page_with_curl: Create DEB Package
-###### Requirements:
-* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
-
-```
-cd /usr/src
-git clone https://github.com/sipcapture/homer-installer
-cd homer-installer
-./generate_deb.sh
-```
-
-##### Install DEB Package
-
-NOTE: Missing dependencies will be automatically resolved by apt-get the second step.
-```
-dpkg -i ./homer-installer_5.0.5-1_amd64.deb
-apt-get -f install
-```
-
-### :package: CentOS 7 **[alpha]**
-##### :page_with_curl: Create RPM Package
-###### Requirements:
-* [FPM](https://github.com/jordansissel/fpm) ```gem install fpm```
-* rpmbuild
-```
-cd /usr/src
-git clone https://github.com/sipcapture/homer-installer
-cd homer-installer
-./generate_rpm.sh
-```
-##### Install RPM Package
-Note: The script will prompt for mysql password multiple times (if needed) during setup.
-```
-yum -y install wget
-wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
-yum -y localinstall mysql57-community-release-el7-7.noarch.rpm
-wget http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo -O /etc/yum.repos.d/kamailio.repo
-yum install homer-installer-5.0.5-1.x86_64.rpm
-```
-
-![splitter](http://i.imgur.com/lytn4zn.png)
-
 
 ### Developers
 Contributors and Contributions to our project are always welcome! If you intend to participate and help us improve HOMER by sending patches, we kindly ask you to sign a standard [CLA (Contributor License Agreement)](http://cla.qxip.net) which enables us to distribute your code alongside the project without restrictions present or future. It doesn’t require you to assign to us any copyright you have, the ownership of which remains in full with you. Developers can coordinate with the existing team via the [homer-dev](http://groups.google.com/group/homer-dev) mailing list. If you'd like to join our internal team and volounteer to help with the project's many needs, feel free to contact us anytime!
-
-
 
 
 ### License & Copyright
