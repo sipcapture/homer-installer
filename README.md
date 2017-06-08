@@ -8,7 +8,6 @@ WARNING: Homer is rock-solid, while the installers and packages are experimental
 Available Methods:
 
   * [BASH Installer](https://github.com/sipcapture/homer-installer#page_with_curl-bash-installer)
-  * [DEB/RPM Installer](https://github.com/sipcapture/homer-installer#package-packages)
   * [DOCKER Containers](https://github.com/sipcapture/homer-docker)
   * [PUPPET Module](https://github.com/giavac/giavac-homer)
 
