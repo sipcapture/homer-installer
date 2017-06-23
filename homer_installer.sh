@@ -593,6 +593,66 @@ config_search_and_replace() {
     $web_cfg_root/sipcapture.conf
 }
 
+create_kamailio_service() {
+  local sys_systemd_base='/lib/systemd/system'
+  local usr_systemd_base='/etc/systemd/system'
+  local sys_kamailio_svc='kamailio.service'
+  local sys_mysql_svc=''
+
+  local cmd_systemctl=$(locate_cmd "systemctl")
+  local cmd_cat=$(locate_cmd "cat")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  
+  if [ -d $sys_systemd_base ]; then
+    if [ -f $sys_systemd_base/mysql.service ]; then
+      sys_mysql_svc=mysql.service
+    elif [ -f $sys_systemd_base/mysqld.service ]; then
+      sys_mysql_svc=mysqld.service
+    fi
+
+    if [ ! -f $sys_systemd_base/$sys_kamailio_svc ]; then
+      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_kamailio_svc
+[Unit]
+Description=Kamailio (OpenSER) - the Open Source SIP Server
+After=network.target
+
+[Service]
+Type=forking
+Environment='CFGFILE=/etc/kamailio/kamailio.cfg'
+Environment='SHM_MEMORY=64'
+Environment='PKG_MEMORY=8'
+Environment='USER=kamailio'
+Environment='GROUP=kamailio'
+EnvironmentFile=-/etc/default/kamailio
+EnvironmentFile=-/etc/default/kamailio.d/*
+# PIDFile requires a full absolute path
+PIDFile=/var/run/kamailio/kamailio.pid
+# ExecStart requires a full absolute path
+ExecStart=/usr/sbin/kamailio -P /var/run/kamailio/kamailio.pid -f \$CFGFILE -m \$SHM_MEMORY -M \$PKG_MEMORY -u \$USER -g \$GROUP
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+__EOFL__
+      check_status "$?"
+    fi  
+    if [ ! -d $usr_systemd_base/${sys_kamailio_svc}.d ]; then
+      $cmd_mkdir -m 0755 -p $usr_systemd_base/${sys_kamailio_svc}.d
+      check_status "$?"
+    fi
+    if [ ! -f $usr_systemd_base/${sys_kamailio_svc}.d/require_mysql.conf ] && \
+       [ ! -z "$sys_mysql_svc" ]; then
+      $cmd_cat << __EOFL__ > $usr_systemd_base/${sys_kamailio_svc}.d/require_mysql.conf
+[Unit]
+After= $sys_mysql_svc
+__EOFL__
+      check_status "$?"
+    fi
+    $cmd_systemctl daemon-reload    
+    check_status "$?"
+  fi
+}
+
 banner_start() {
   # This is the banner displayed at the start of script execution
 
@@ -738,6 +798,8 @@ setup_centos_7() {
   $cmd_yum -y install $base_pkg_list $kamailio_pkg_list $mysql_pkg_list
   # check_status "$?"
 
+  create_kamailio_service
+
   for svc in ${service_names[@]}; do
     $cmd_chkconfig "$svc" on
   done
@@ -823,6 +885,7 @@ setup_debian_8() {
   DEBIAN_FRONTEND=noninteractive $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq \
     $base_pkg_list $kamailio_pkg_list $mysql_pkg_list
 
+  create_kamailio_service
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_config_dir" "https://github.com/sipcapture/homer-config.git"
