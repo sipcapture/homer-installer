@@ -52,8 +52,8 @@ my_pid=$$
 
 
 # HOMER Options, defaults
-DB_USER="homer"
-DB_PASS=""
+DB_USER="homer_user"
+DB_PASS="homer_password"
 DB_HOST="localhost"
 LISTEN_PORT="9060"
 
@@ -63,7 +63,7 @@ DB_ADMIN_USER="root"
 DB_ADMIN_PASS=""
 DB_ADMIN_TEMP_PASS=""
 
-VERSION=5.0.1
+VERSION=5.0.5
 SETUP_ENTRYPOINT=""
 OS=""
 DISTRO=""
@@ -300,9 +300,9 @@ create_or_update_misc() {
 }
 
 create_or_update_config() {
-  # This function copies the deafult configuration files for homer and kamailio into place
+  # This function copies the deafult configuration files for homer and opensips into place
 
-  local kamailio_version=${1:-"4"}
+  local opensips_version=${1:-"2"}
   local overwrite_dst=${2:-"yes"}
   local -a cfg_files=(
                        "$src_base_dir/$src_homer_config_dir/docker/configuration.php|$web_doc_root/api/configuration.php" \
@@ -313,9 +313,8 @@ create_or_update_config() {
   cmd_cp=$(locate_cmd "cp")
   cmd_chmod=$(locate_cmd "chmod")
 
-  case "$kamailio_version" in
-    4 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio|/etc/kamailio/kamailio.cfg") ;;
-    5 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio5|/etc/kamailio/kamailio.cfg") ;;
+  case "$opensips_version" in
+    2 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.opensips|/etc/opensips/opensips.cfg") ;;
   esac
 
   local original_ifs=$IFS
@@ -579,13 +578,13 @@ config_search_and_replace() {
     -e "s/{{ DB_HOST }}/$DB_HOST/g" \
     "$web_doc_root/api/configuration.php"
 
-  # Kamailio Scripts
+  # OpenSIPS Scripts
   $cmd_sed -i \
-    -e "s/homer_user/$DB_USER/g" \
-    -e "s/homer_password/$DB_PASS/g" \
-    -e "s/127\.0\.0\.1/$DB_HOST/g" \
+    -e "s/{{ DB_USER }}/$DB_USER/g" \
+    -e "s/{{ DB_PASS }}/$DB_PASS/g" \
+    -e "s/{{ DB_HOST }}/$DB_HOST/g" \
     -e "s/9060/$LISTEN_PORT/g" \
-    /etc/kamailio/kamailio.cfg
+    /etc/opensips/opensips.cfg
 
   # Apache docroot
   $cmd_sed -i \
@@ -593,10 +592,10 @@ config_search_and_replace() {
     $web_cfg_root/sipcapture.conf
 }
 
-create_kamailio_service() {
+create_opensips_service() {
   local sys_systemd_base='/lib/systemd/system'
   local usr_systemd_base='/etc/systemd/system'
-  local sys_kamailio_svc='kamailio.service'
+  local sys_opensips_svc='opensips.service'
   local sys_mysql_svc=''
 
   local cmd_systemctl=$(locate_cmd "systemctl")
@@ -610,25 +609,25 @@ create_kamailio_service() {
       sys_mysql_svc=mysqld.service
     fi
 
-    if [ ! -f $sys_systemd_base/$sys_kamailio_svc ]; then
-      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_kamailio_svc
+    if [ ! -f $sys_systemd_base/$sys_opensips_svc ]; then
+      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_opensips_svc
 [Unit]
-Description=Kamailio (OpenSER) - the Open Source SIP Server
+Description=OpenSIPS (OpenSER) - the Open Source SIP Server
 After=network.target
 
 [Service]
 Type=forking
-Environment='CFGFILE=/etc/kamailio/kamailio.cfg'
+Environment='CFGFILE=/etc/opensips/opensips.cfg'
 Environment='SHM_MEMORY=64'
 Environment='PKG_MEMORY=8'
-Environment='USER=kamailio'
-Environment='GROUP=kamailio'
-EnvironmentFile=-/etc/default/kamailio
-EnvironmentFile=-/etc/default/kamailio.d/*
+Environment='USER=opensips'
+Environment='GROUP=opensips'
+EnvironmentFile=-/etc/default/opensips
+EnvironmentFile=-/etc/default/opensips.d/*
 # PIDFile requires a full absolute path
-PIDFile=/var/run/kamailio/kamailio.pid
+PIDFile=/var/run/opensips/opensips.pid
 # ExecStart requires a full absolute path
-ExecStart=/usr/sbin/kamailio -P /var/run/kamailio/kamailio.pid -f \$CFGFILE -m \$SHM_MEMORY -M \$PKG_MEMORY -u \$USER -g \$GROUP
+ExecStart=/usr/sbin/opensips -P /var/run/opensips/opensips.pid -f \$CFGFILE -m \$SHM_MEMORY -M \$PKG_MEMORY -u \$USER -g \$GROUP
 Restart=on-abort
 
 [Install]
@@ -636,13 +635,13 @@ WantedBy=multi-user.target
 __EOFL__
       check_status "$?"
     fi  
-    if [ ! -d $usr_systemd_base/${sys_kamailio_svc}.d ]; then
-      $cmd_mkdir -m 0755 -p $usr_systemd_base/${sys_kamailio_svc}.d
+    if [ ! -d $usr_systemd_base/${sys_opensips_svc}.d ]; then
+      $cmd_mkdir -m 0755 -p $usr_systemd_base/${sys_opensips_svc}.d
       check_status "$?"
     fi
-    if [ ! -f $usr_systemd_base/${sys_kamailio_svc}.d/require_mysql.conf ] && \
+    if [ ! -f $usr_systemd_base/${sys_opensips_svc}.d/require_mysql.conf ] && \
        [ ! -z "$sys_mysql_svc" ]; then
-      $cmd_cat << __EOFL__ > $usr_systemd_base/${sys_kamailio_svc}.d/require_mysql.conf
+      $cmd_cat << __EOFL__ > $usr_systemd_base/${sys_opensips_svc}.d/require_mysql.conf
 [Unit]
 After= $sys_mysql_svc
 __EOFL__
@@ -705,11 +704,11 @@ banner_end() {
   echo "         '$WEB_ROOT/api/configuration.php'"
   echo "         '$WEB_ROOT/api/preferences.php'"
   echo
-  echo "     * Verify capture settings for Homer/Kamailio:"
-  echo "         '/etc/kamailio/kamailio.cfg'"
+  echo "     * Verify capture settings for Homer/OpenSIPS:"
+  echo "         '/etc/opensips/opensips.cfg'"
   echo
   echo "     * Start/stop Homer SIP Capture:"
-  echo "         '/sbin/kamctl start|stop'"
+  echo "         '/sbin/opensipsctl start|stop'"
   echo
   echo "     * Access HOMER UI:"
   echo "         http://$my_primary_ip"
@@ -764,10 +763,10 @@ setup_centos_7() {
                        gnutls-devel openssl openssl-devel mod_ssl perl patch rsyslog \
                        unzip zip zlib zlib-devel bison flex pcre-devel libxml2-devel \
                        sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
-  local kamailio_pkg_list="kamailio kamailio-outbound kamailio-sctp kamailio-tls \
-                           kamailio-websocket kamailio-jansson kamailio-mysql"
+  local opensips_pkg_list="opensips opensips-geoip-module opensips-json-module \
+                           opensips-mysql-module opensips-regex-module opensips-restclient-module"
   local mysql_pkg_list="libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server mysql-community-client"
-  local -a service_names=("mysqld" "kamailio" "httpd")
+  local -a service_names=("mysqld" "opensips" "httpd")
   local web_cfg_root="/etc/httpd/conf.d"
   local web_doc_root="/var/www/html/homer"
   WEB_ROOT=$web_doc_root # WEB_ROOT used in banner_end function
@@ -786,19 +785,17 @@ setup_centos_7() {
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
 
-  $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
-    "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo"
-  check_status "$?"
+  $cmd_yum -q -y "install http://yum.opensips.org/2.3/releases/el/7/x86_64/opensips-yum-releases-2.3-3.el7.noarch.rpm"
 
   $cmd_yum clean all; $cmd_yum makecache
 
   $cmd_yum -y update
   check_status "$?"
 
-  $cmd_yum -y install $base_pkg_list $kamailio_pkg_list $mysql_pkg_list
+  $cmd_yum -y install $base_pkg_list $opensips_pkg_list $mysql_pkg_list
   # check_status "$?"
 
-  create_kamailio_service
+  create_opensips_service
 
   for svc in ${service_names[@]}; do
     $cmd_chkconfig "$svc" on
@@ -842,14 +839,13 @@ setup_debian_8() {
   local base_pkg_list="ca-certificates apache2 libapache2-mod-php5 php5 \
                        php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
                        php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
-  local kamailio_pkg_list="kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules \
-                           kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules \
-                           kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules \
+  local opensips_pkg_list="rsyslog opensips opensips-geoip-module opensips-json-module opensips-mysql-module \
+                           opensips-regex-module opensips-restclient-module \
                            geoip-database geoip-database-extra"
   local mysql_pkg_list="mysql-server libmysqlclient18"
-  local -a service_names=("mysql" "kamailio" "apache2")
+  local -a service_names=("mysql" "opensips" "apache2")
   local -a repo_keys=(
-                       'kamailio44|FB40D3E6508EA4C8' \
+                       'opensips23|049AD65B' \
                        'mysql57|8C718D3B5072E1F5'
                      )
   local web_cfg_root="/etc/apache2/sites-available"
@@ -870,8 +866,7 @@ setup_debian_8() {
   local cmd_update_rcd=$(locate_cmd "update-rc.d")
 
   echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list
-  echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list
-  echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list
+  echo "deb http://apt.opensips.org jessie 2.3-releases" > /etc/apt/sources.list.d/opensips23.list
 
   local original_ifs=$IFS
   IFS=$'|'
@@ -883,9 +878,9 @@ setup_debian_8() {
 
   $cmd_apt_get update -qq
   DEBIAN_FRONTEND=noninteractive $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq \
-    $base_pkg_list $kamailio_pkg_list $mysql_pkg_list
+    $base_pkg_list $opensips_pkg_list $mysql_pkg_list
 
-  create_kamailio_service
+  create_opensips_service
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_config_dir" "https://github.com/sipcapture/homer-config.git"
@@ -917,12 +912,12 @@ setup_debian_8() {
   config_search_and_replace
   $mnt_script_dir/homer_rotate
 
-  if [[ -d /usr/lib/x86_64-linux-gnu/kamailio ]]; then
+  if [[ -d /usr/lib/x86_64-linux-gnu/opensips ]]; then
     if [[ ! -e /usr/lib64 ]]; then
       $cmd_ln -r -f -s /usr/lib /usr/lib64
     fi
-    if [[ ! -e /usr/lib64/kamailio ]]; then
-      $cmd_ln -r -f -s /usr/lib/x86_64-linux-gnu/kamailio /usr/lib64/kamailio
+    if [[ ! -e /usr/lib64/opensips ]]; then
+      $cmd_ln -r -f -s /usr/lib/x86_64-linux-gnu/opensips /usr/lib64/opensips
     fi
   fi
 
