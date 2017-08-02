@@ -314,7 +314,7 @@ create_or_update_config() {
   cmd_chmod=$(locate_cmd "chmod")
 
   case "$opensips_version" in
-    2 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.opensips|/etc/opensips/opensips.cfg") ;;
+    2 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.opensips23|/etc/opensips/opensips.cfg") ;;
   esac
 
   local original_ifs=$IFS
