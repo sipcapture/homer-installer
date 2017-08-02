@@ -17,7 +17,7 @@ Available Methods:
 ## :page_with_curl: Bash Installer
 The baseline installer expects a Vanilla OS and will install and configure:
 * Homer 5.x
-* Kamailio 4.4
+* OpenSIPS 2.3
 * MySQL 5.7
 * Apache2 + PHP5
 
@@ -29,7 +29,7 @@ Supported OS:
 Execute the following command and follow the interactive prompts to install:
 ```
 cd /usr/src
-wget https://cdn.rawgit.com/sipcapture/homer-installer/master/homer_installer.sh
+wget https://cdn.rawgit.com/sipcapture/homer-installer/opensips-2.3/homer_installer.sh
 chmod +x homer_installer.sh
 ./homer_installer.sh
 ```
@@ -50,7 +50,7 @@ Contributors and Contributions to our project are always welcome! If you intend 
 
 *Captagent is released under GNU GPLv3 license*
 
-*(C) 2008-2016 [SIPCAPTURE](http://sipcapture.org) & [QXIP BV](http://qxip.net)*
+*(C) 2008-2017 [SIPCAPTURE](http://sipcapture.org) & [QXIP BV](http://qxip.net)*
 
 ----------
 
