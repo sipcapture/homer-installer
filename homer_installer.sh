@@ -845,7 +845,7 @@ setup_debian_8() {
   # This is the main entrypoint for setup of sipcapture/homer on a Debian 8
   # system
 
-  local base_pkg_list="ca-certificates apache2 libapache2-mod-php5 php5 \
+  local base_pkg_list="ca-certificates curl apache2 libapache2-mod-php5 php5 \
                        php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
                        php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
   local kamailio_pkg_list="kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules \
