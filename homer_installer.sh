@@ -69,6 +69,7 @@ OS=""
 DISTRO=""
 DISTRO_VERSION=""
 WEB_ROOT=""
+KAMAILIO_VERSION="5"
 
 ######################################################################
 #
@@ -303,6 +304,7 @@ create_or_update_config() {
   # This function copies the deafult configuration files for homer and kamailio into place
 
   local kamailio_version=${1:-"5"}
+  KAMAILIO_VERSION="$kamailio_version"
   local overwrite_dst=${2:-"yes"}
   local -a cfg_files=(
                        "$src_base_dir/$src_homer_config_dir/docker/configuration.php|$web_doc_root/api/configuration.php" \
@@ -313,7 +315,7 @@ create_or_update_config() {
   cmd_cp=$(locate_cmd "cp")
   cmd_chmod=$(locate_cmd "chmod")
 
-  case "$kamailio_version" in
+  case "$KAMAILIO_VERSION" in
     4 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio|/etc/kamailio/kamailio.cfg") ;;
     5 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio5|/etc/kamailio/kamailio.cfg") ;;
   esac
@@ -786,7 +788,7 @@ setup_centos_7() {
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
 
-  case "$kamailio_version" in
+  case "$KAMAILIO_VERSION" in
     4 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
     "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo" ;;
     5 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v5.0.x-rpms.repo \
@@ -873,7 +875,7 @@ setup_debian_8() {
   local cmd_ln=$(locate_cmd "ln")
   local cmd_update_rcd=$(locate_cmd "update-rc.d")
 
-  case "$kamailio_version" in
+  case "$KAMAILIO_VERSION" in
     4 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
             echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list && \
             echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list ;;
