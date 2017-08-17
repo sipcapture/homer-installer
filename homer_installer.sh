@@ -316,8 +316,9 @@ create_or_update_config() {
   cmd_chmod=$(locate_cmd "chmod")
 
   case "$KAMAILIO_VERSION" in
-    4 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio|/etc/kamailio/kamailio.cfg") ;;
-    5 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio5|/etc/kamailio/kamailio.cfg") ;;
+    5 ) $cmd_cp /usr/src/homer-config/metric/kamailio5/* /etc/kamailio/
+        $cmd_chmod 0644 /etc/kamailio/*
+        ;;
   esac
 
   local original_ifs=$IFS
@@ -789,8 +790,6 @@ setup_centos_7() {
   # check_status "$?"
 
   case "$KAMAILIO_VERSION" in
-    4 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
-    "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo" ;;
     5 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v5.0.x-rpms.repo \
     "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" ;;
   esac
@@ -876,9 +875,6 @@ setup_debian_8() {
   local cmd_update_rcd=$(locate_cmd "update-rc.d")
 
   case "$KAMAILIO_VERSION" in
-    4 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
-            echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list && \
-            echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list ;;
     5 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
             echo "deb http://deb.kamailio.org/kamailio50 jessie main" > /etc/apt/sources.list.d/kamailio50.list && \
             echo "deb-src http://deb.kamailio.org/kamailio50 jessie main" >> /etc/apt/sources.list.d/kamailio50.list ;;
