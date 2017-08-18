@@ -852,7 +852,7 @@ setup_debian_9() {
   local -a service_names=("mysql" "kamailio" "apache2")
   local -a repo_keys=(
                        'kamailio50|FB40D3E6508EA4C8' \
-                       'mariaDB102|0xF1656F24C74CD1D8'
+                       'mariaDB102|F1656F24C74CD1D8'
                      )
   local web_cfg_root="/etc/apache2/sites-available"
   local web_doc_root="/var/www/html/homer"
