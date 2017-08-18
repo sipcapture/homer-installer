@@ -162,7 +162,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               8* ) SETUP_ENTRYPOINT="setup_debian_8"
+               9* ) SETUP_ENTRYPOINT="setup_debian_9"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -316,7 +316,6 @@ create_or_update_config() {
   cmd_chmod=$(locate_cmd "chmod")
 
   case "$KAMAILIO_VERSION" in
-    4 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio|/etc/kamailio/kamailio.cfg") ;;
     5 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio5|/etc/kamailio/kamailio.cfg") ;;
   esac
 
@@ -487,11 +486,11 @@ mysql_secure() {
 
   if [[ x"$use_password"x == x"yes"x ]]; then
     $cmd_mysql $mysql_params --password="$DB_ADMIN_TEMP_PASS" --connect-expired-password -e \
-      "SET GLOBAL validate_password_policy=LOW; ALTER USER USER() IDENTIFIED BY '$DB_ADMIN_PASS';"
+      "SET GLOBAL validate_password_policy=LOW; ALTER USER ${DB_ADMIN_USER}@${DB_HOST} IDENTIFIED BY '$DB_ADMIN_PASS';"
     check_status "$?"
   else
     $cmd_mysql $mysql_params -e \
-      "ALTER USER USER() IDENTIFIED BY '$DB_ADMIN_PASS';"
+      "ALTER USER ${DB_ADMIN_USER}@${DB_HOST} IDENTIFIED BY '$DB_ADMIN_PASS';"
     check_status "$?"
   fi
 
@@ -789,8 +788,6 @@ setup_centos_7() {
   # check_status "$?"
 
   case "$KAMAILIO_VERSION" in
-    4 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
-    "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo" ;;
     5 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v5.0.x-rpms.repo \
     "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" ;;
   esac
@@ -841,22 +838,21 @@ setup_centos_7() {
   done
 }
 
-setup_debian_8() {
-  # This is the main entrypoint for setup of sipcapture/homer on a Debian 8
-  # system
+setup_debian_9() {
+  # This is the main entrypoint for setup of sipcapture/homer on a Debian 9 system
 
-  local base_pkg_list="ca-certificates curl apache2 libapache2-mod-php5 php5 \
-                       php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
-                       php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
+  local base_pkg_list="ca-certificates curl apache2 libapache2-mod-php php \
+                       php-cli php-gd php-pear php-dev php-mysql php-json \
+                       git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
   local kamailio_pkg_list="kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules \
                            kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules \
                            kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules \
                            geoip-database geoip-database-extra"
-  local mysql_pkg_list="mysql-server libmysqlclient18"
+  local mysql_pkg_list="mariadb-server libmariadbclient18"
   local -a service_names=("mysql" "kamailio" "apache2")
   local -a repo_keys=(
                        'kamailio50|FB40D3E6508EA4C8' \
-                       'mysql57|8C718D3B5072E1F5'
+                       'mariaDB102|0xF1656F24C74CD1D8'
                      )
   local web_cfg_root="/etc/apache2/sites-available"
   local web_doc_root="/var/www/html/homer"
@@ -876,12 +872,9 @@ setup_debian_8() {
   local cmd_update_rcd=$(locate_cmd "update-rc.d")
 
   case "$KAMAILIO_VERSION" in
-    4 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
-            echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list && \
-            echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list ;;
-    5 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
-            echo "deb http://deb.kamailio.org/kamailio50 jessie main" > /etc/apt/sources.list.d/kamailio50.list && \
-            echo "deb-src http://deb.kamailio.org/kamailio50 jessie main" >> /etc/apt/sources.list.d/kamailio50.list ;;
+    5 ) echo "deb [arch=i386,amd64] http://mirror.netcologne.de/mariadb/repo/10.2/debian stretch main" > /etc/apt/sources.list.d/mariadb.list && \
+            echo "deb http://deb.kamailio.org/kamailio50 stretch main" > /etc/apt/sources.list.d/kamailio50.list && \
+            echo "deb-src http://deb.kamailio.org/kamailio50 stretch main" >> /etc/apt/sources.list.d/kamailio50.list ;;
   esac
  
   local original_ifs=$IFS
