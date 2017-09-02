@@ -167,6 +167,12 @@ detect_linux_distribution() {
                *  ) return 1 ;; # Unsupported Distribution
              esac
              ;;
+    Devuan ) case "$distro_version" in
+               jessie ) SETUP_ENTRYPOINT="setup_debian_8"
+                    return 0 ;; # Suported Distribution
+               *  ) return 1 ;; # Unsupported Distribution
+             esac
+             ;;
     CentOS ) case "$distro_version" in
                7* ) SETUP_ENTRYPOINT="setup_centos_7"
                     return 0 ;; # Suported Distribution
