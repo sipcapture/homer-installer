@@ -935,6 +935,11 @@ setup_debian_8() {
     if [[ ! -e /usr/lib64/kamailio ]]; then
       $cmd_ln -r -f -s /usr/lib/x86_64-linux-gnu/kamailio /usr/lib64/kamailio
     fi
+  else
+    if [[ ! -d /usr/lib/x86_64-linux-gnu ]]; then
+      mkdir -p /usr/lib/x86_64-linux-gnu
+      $cmd_ln -r -f -s /usr/lib64/kamailio /usr/lib/x86_64-linux-gnu/kamailio
+    fi
   fi
 
   local cmd_a2enmod=$(locate_cmd "a2enmod")
