@@ -135,10 +135,11 @@ is_supported_os() {
   case "$os_type" in
     linux* ) OS="Linux"
              minimal_command_list="lsb_release"
+						 package_list="redhat-lsb-core"
              if ! have_commands "$minimal_command_list"; then
                echo "ERROR: You need the following minimal set of commands installed:"
                echo ""
-               echo "       $minimal_command_list"
+               echo "       $package_list"
                echo ""
                exit 1
              fi
