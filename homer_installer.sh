@@ -135,10 +135,11 @@ is_supported_os() {
   case "$os_type" in
     linux* ) OS="Linux"
              minimal_command_list="lsb_release"
+						 package_list="redhat-lsb-core"
              if ! have_commands "$minimal_command_list"; then
                echo "ERROR: You need the following minimal set of commands installed:"
                echo ""
-               echo "       $minimal_command_list"
+               echo "       $package_list"
                echo ""
                exit 1
              fi
@@ -300,7 +301,7 @@ create_or_update_misc() {
 }
 
 create_or_update_config() {
-  # This function copies the deafult configuration files for homer and opensips into place
+  # This function copies the default configuration files for homer and opensips into place
 
   local opensips_version=${1:-"2"}
   local overwrite_dst=${2:-"yes"}
@@ -590,6 +591,29 @@ config_search_and_replace() {
   $cmd_sed -i \
     -e "s|^\(.*DocumentRoot\).*|\1 $web_doc_root|g" \
     $web_cfg_root/sipcapture.conf
+
+
+	# Fix MPATH in opensips.cfg
+	# CentOS 7 Opensips modules default install path: /usr/lib64/opensips/modules/
+	# Opensips default val. configuration path: /usr/local/lib64/opensips/modules/
+	$cmd_sed -i \
+		-e 's|mpath="/usr/local/lib64|mpath="/usr/lib64|g' \
+		/etc/opensips/opensips.cfg
+
+	# Fix LISTEN addresses in opensips.cfg
+	# Asterisk (*) symbol prevents server from starting.
+	$cmd_sed -i \
+		-e 's|listen=hep_udp:\*|listen=hep_udp:0.0.0.0|g' \
+		/etc/opensips/opensips.cfg
+	$cmd_sed -i \
+		-e 's|listen=hep_tcp:\*|listen=hep_tcp:0.0.0.0|g' \
+		/etc/opensips/opensips.cfg
+
+	# Opensips DB Maintenance Scripts
+	$cmd_sed -i \
+		-e 's|homer_user|'"$DB_USER"'|g' \
+		-e 's|homer_password|'"$DB_PASS"'|g' \
+		/etc/opensips/opensips.cfg
 }
 
 create_opensips_service() {
@@ -682,7 +706,7 @@ banner_end() {
   local cmd_head=$(locate_cmd "head")
   local cmd_cut=$(locate_cmd "cut")
 
-  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d' ' -f8)
+  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d ' ' -f7)
 
   echo "*************************************************************"
   echo "      ,;;;;,                                                 "
@@ -758,13 +782,14 @@ setup_centos_7() {
   # This is the main entrypoint for setup of sipcapture/homer on a CentOS 7
   # system
 
-  local base_pkg_list="wget autoconf automake bzip2 cpio curl curl-devel \
-                       expat-devel fileutils make gcc gcc-c++ gettext-devel \
+  local base_pkg_list="wget autoconf automake bzip2 cpio curl curl-devel expat-devel \
+                       perl-Frontier-RPC php-json make gcc gcc-c++ git gettext-devel \
                        gnutls-devel openssl openssl-devel mod_ssl perl patch rsyslog \
                        unzip zip zlib zlib-devel bison flex pcre-devel libxml2-devel \
-                       sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
-  local opensips_pkg_list="opensips opensips-geoip-module opensips-json-module \
-                           opensips-mysql-module opensips-regex-module opensips-restclient-module"
+                       sox httpd php php-gd php-mysql fileutils php-mysql php-devel"
+  local opensips_pkg_list="opensips opensips-json opensips-mmgeoip opensips-json \
+													 opensips-rest_client opensips-db_mysql opensips-regex \
+													 opensips-proto_hep"
   local mysql_pkg_list="libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server mysql-community-client"
   local -a service_names=("mysqld" "opensips" "httpd")
   local web_cfg_root="/etc/httpd/conf.d"
@@ -781,6 +806,8 @@ setup_centos_7() {
   local cmd_wget=$(locate_cmd "wget")
   local cmd_chkconfig=$(locate_cmd "chkconfig")
   local cmd_service=$(locate_cmd "service")
+	
+	$cmd_yum -q -y install epel-release
 
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
