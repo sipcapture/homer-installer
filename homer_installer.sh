@@ -782,13 +782,14 @@ setup_centos_7() {
   # This is the main entrypoint for setup of sipcapture/homer on a CentOS 7
   # system
 
-  local base_pkg_list="wget autoconf automake bzip2 cpio curl curl-devel \
-                       expat-devel fileutils make gcc gcc-c++ gettext-devel \
+  local base_pkg_list="wget autoconf automake bzip2 cpio curl curl-devel expat-devel \
+                       perl-Frontier-RPC php-json make gcc gcc-c++ git gettext-devel \
                        gnutls-devel openssl openssl-devel mod_ssl perl patch rsyslog \
                        unzip zip zlib zlib-devel bison flex pcre-devel libxml2-devel \
-                       sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
-  local opensips_pkg_list="opensips opensips-geoip-module opensips-json-module \
-                           opensips-mysql-module opensips-regex-module opensips-restclient-module"
+                       sox httpd php php-gd php-mysql fileutils php-mysql php-devel"
+  local opensips_pkg_list="opensips opensips-json opensips-mmgeoip opensips-json \
+													 opensips-rest_client opensips-db_mysql opensips-regex \
+													 opensips-proto_hep"
   local mysql_pkg_list="libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server mysql-community-client"
   local -a service_names=("mysqld" "opensips" "httpd")
   local web_cfg_root="/etc/httpd/conf.d"
