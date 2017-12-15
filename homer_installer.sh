@@ -591,6 +591,29 @@ config_search_and_replace() {
   $cmd_sed -i \
     -e "s|^\(.*DocumentRoot\).*|\1 $web_doc_root|g" \
     $web_cfg_root/sipcapture.conf
+
+
+	# Fix MPATH in opensips.cfg
+	# CentOS 7 Opensips modules default install path: /usr/lib64/opensips/modules/
+	# Opensips default val. configuration path: /usr/local/lib64/opensips/modules/
+	$cmd_sed -i \
+		-e 's|mpath="/usr/local/lib64|mpath="/usr/lib64|g' \
+		/etc/opensips/opensips.cfg
+
+	# Fix LISTEN addresses in opensips.cfg
+	# Asterisk (*) symbol prevents server from starting.
+	$cmd_sed -i \
+		-e 's|listen=hep_udp:\*|listen=hep_udp:0.0.0.0|g' \
+		/etc/opensips/opensips.cfg
+	$cmd_sed -i \
+		-e 's|listen=hep_tcp:\*|listen=hep_tcp:0.0.0.0|g' \
+		/etc/opensips/opensips.cfg
+
+	# Opensips DB Maintenance Scripts
+	$cmd_sed -i \
+		-e 's|homer_user|'"$DB_USER"'|g' \
+		-e 's|homer_password|'"$DB_PASS"'|g' \
+		/etc/opensips/opensips.cfg
 }
 
 create_opensips_service() {
