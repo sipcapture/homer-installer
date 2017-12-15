@@ -301,7 +301,7 @@ create_or_update_misc() {
 }
 
 create_or_update_config() {
-  # This function copies the deafult configuration files for homer and opensips into place
+  # This function copies the default configuration files for homer and opensips into place
 
   local opensips_version=${1:-"2"}
   local overwrite_dst=${2:-"yes"}
