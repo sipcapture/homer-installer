@@ -706,7 +706,7 @@ banner_end() {
   local cmd_head=$(locate_cmd "head")
   local cmd_cut=$(locate_cmd "cut")
 
-  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d' ' -f8)
+  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d ' ' -f7)
 
   echo "*************************************************************"
   echo "      ,;;;;,                                                 "
