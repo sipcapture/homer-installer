@@ -806,6 +806,8 @@ setup_centos_7() {
   local cmd_wget=$(locate_cmd "wget")
   local cmd_chkconfig=$(locate_cmd "chkconfig")
   local cmd_service=$(locate_cmd "service")
+	
+	$cmd_yum -q -y install epel-release
 
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
