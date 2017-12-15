@@ -785,7 +785,7 @@ setup_centos_7() {
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
 
-  $cmd_yum -q -y "install http://yum.opensips.org/2.3/releases/el/7/x86_64/opensips-yum-releases-2.3-3.el7.noarch.rpm"
+  $cmd_yum -q -y install "http://yum.opensips.org/2.3/releases/el/7/x86_64/opensips-yum-releases-2.3-3.el7.noarch.rpm"
 
   $cmd_yum clean all; $cmd_yum makecache
 
