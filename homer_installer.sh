@@ -69,6 +69,7 @@ OS=""
 DISTRO=""
 DISTRO_VERSION=""
 WEB_ROOT=""
+KAMAILIO_VERSION="5"
 
 ######################################################################
 #
@@ -302,7 +303,8 @@ create_or_update_misc() {
 create_or_update_config() {
   # This function copies the deafult configuration files for homer and kamailio into place
 
-  local kamailio_version=${1:-"4"}
+  local kamailio_version=${1:-"5"}
+  KAMAILIO_VERSION="$kamailio_version"
   local overwrite_dst=${2:-"yes"}
   local -a cfg_files=(
                        "$src_base_dir/$src_homer_config_dir/docker/configuration.php|$web_doc_root/api/configuration.php" \
@@ -313,7 +315,7 @@ create_or_update_config() {
   cmd_cp=$(locate_cmd "cp")
   cmd_chmod=$(locate_cmd "chmod")
 
-  case "$kamailio_version" in
+  case "$KAMAILIO_VERSION" in
     4 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio|/etc/kamailio/kamailio.cfg") ;;
     5 ) cfg_files+=("${cfg_files[@]}" "/usr/src/homer-config/sipcapture/sipcapture.kamailio5|/etc/kamailio/kamailio.cfg") ;;
   esac
@@ -786,8 +788,12 @@ setup_centos_7() {
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
 
-  $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
-    "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo"
+  case "$KAMAILIO_VERSION" in
+    4 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
+    "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo" ;;
+    5 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v5.0.x-rpms.repo \
+    "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" ;;
+  esac
   check_status "$?"
 
   $cmd_yum clean all; $cmd_yum makecache
@@ -839,7 +845,7 @@ setup_debian_8() {
   # This is the main entrypoint for setup of sipcapture/homer on a Debian 8
   # system
 
-  local base_pkg_list="ca-certificates apache2 libapache2-mod-php5 php5 \
+  local base_pkg_list="ca-certificates curl apache2 libapache2-mod-php5 php5 \
                        php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
                        php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
   local kamailio_pkg_list="kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules \
@@ -849,7 +855,7 @@ setup_debian_8() {
   local mysql_pkg_list="mysql-server libmysqlclient18"
   local -a service_names=("mysql" "kamailio" "apache2")
   local -a repo_keys=(
-                       'kamailio44|FB40D3E6508EA4C8' \
+                       'kamailio50|FB40D3E6508EA4C8' \
                        'mysql57|8C718D3B5072E1F5'
                      )
   local web_cfg_root="/etc/apache2/sites-available"
@@ -869,10 +875,15 @@ setup_debian_8() {
   local cmd_ln=$(locate_cmd "ln")
   local cmd_update_rcd=$(locate_cmd "update-rc.d")
 
-  echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list
-  echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list
-  echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list
-
+  case "$KAMAILIO_VERSION" in
+    4 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
+            echo "deb http://deb.kamailio.org/kamailio44 jessie main" > /etc/apt/sources.list.d/kamailio44.list && \
+            echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio44.list ;;
+    5 ) echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-5.7" > /etc/apt/sources.list.d/mysql.list && \
+            echo "deb http://deb.kamailio.org/kamailio50 jessie main" > /etc/apt/sources.list.d/kamailio50.list && \
+            echo "deb-src http://deb.kamailio.org/kamailio50 jessie main" >> /etc/apt/sources.list.d/kamailio50.list ;;
+  esac
+ 
   local original_ifs=$IFS
   IFS=$'|'
   for key_info in "${repo_keys[@]}"; do
@@ -923,6 +934,11 @@ setup_debian_8() {
     fi
     if [[ ! -e /usr/lib64/kamailio ]]; then
       $cmd_ln -r -f -s /usr/lib/x86_64-linux-gnu/kamailio /usr/lib64/kamailio
+    fi
+  else
+    if [[ ! -d /usr/lib/x86_64-linux-gnu ]]; then
+      mkdir -p /usr/lib/x86_64-linux-gnu
+      $cmd_ln -r -f -s /usr/lib64/kamailio /usr/lib/x86_64-linux-gnu/kamailio
     fi
   fi
 
