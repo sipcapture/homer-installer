@@ -250,6 +250,32 @@ create_or_update_dir() {
   check_status "$?"
 }
 
+create_dir() {
+  # This function essentially copies the homer ui/api from
+  # their source directory to their destination directory
+  # and sets the proper ownerships once done
+
+  local dst_dir="$1"
+
+  local cmd_find=$(locate_cmd "find")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_chown=$(locate_cmd "chown")
+  local cmd_cpio=$(locate_cmd "cpio")
+
+  if [ ! -d "$dst_dir" ]; then
+    $cmd_mkdir -p -m 0755 "$dst_dir"
+    check_status "$?"
+    $cmd_chown "$web_ownership" "$dst_dir"
+    check_status "$?"
+  else
+    echo "ERROR: Target directory '$src_dir' not found, aborting."
+    echo "Please check the log above and correct the issue."
+    exit 1
+  fi
+
+}
+
+
 create_or_update_maintenance_scripts() {
   # This function copies the sipcapture maintenance scripts to
   # the homer maintenance scripts directory
@@ -766,7 +792,7 @@ setup_centos_7() {
   WEB_ROOT=$web_doc_root # WEB_ROOT used in banner_end function
   local web_ownership="apache:apache"
   local mnt_script_dir="/opt/homer"
-  local heplify_root="/opt/heplify"
+  local heplify_root="/opt/heplify-server"
   local src_base_dir="/usr/src"
   local src_homer_ui_dir="homer-ui"
   local src_homer_api_dir="homer-api"
@@ -794,13 +820,12 @@ setup_centos_7() {
   $cmd_yum -y install $base_pkg_list $mysql_pkg_list
   # check_status "$?"
 
+  create_dir "$heplify_root"
   create_heplify_service
 
   for svc in ${service_names[@]}; do
     $cmd_chkconfig "$svc" on
   done
-
-  create_or_update_dir "$heplify_root"
 
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
@@ -850,7 +875,7 @@ setup_debian_8() {
   WEB_ROOT=$web_doc_root # WEB_ROOT used in banner_end function
   local web_ownership="www-data:www-data"
   local mnt_script_dir="/opt/homer"
-  local heplify_root="/opt/heplify"
+  local heplify_root="/opt/heplify-server"
   local src_base_dir="/usr/src"
   local src_homer_ui_dir="homer-ui"
   local src_homer_api_dir="homer-api"
@@ -862,6 +887,8 @@ setup_debian_8() {
   local cmd_rm=$(locate_cmd "rm")
   local cmd_ln=$(locate_cmd "ln")
   local cmd_update_rcd=$(locate_cmd "update-rc.d")
+
+  create_dir "$heplify_root"
 
   case "$HEPLIFY_VERSION" in
     1 ) $cmd_wget --inet4-only --quiet --output-document=$heplify_root/heplify-server \
@@ -880,7 +907,6 @@ setup_debian_8() {
   DEBIAN_FRONTEND=noninteractive $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq \
     $base_pkg_list $mysql_pkg_list
 
-  create_or_update_dir "$heplify_root"
   create_heplify_service
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
