@@ -265,12 +265,8 @@ create_dir() {
   if [ ! -d "$dst_dir" ]; then
     $cmd_mkdir -p -m 0755 "$dst_dir"
     check_status "$?"
-    $cmd_chown "$web_ownership" "$dst_dir"
-    check_status "$?"
   else
-    echo "ERROR: Target directory '$src_dir' not found, aborting."
-    echo "Please check the log above and correct the issue."
-    exit 1
+    echo "ERROR: New directory '$dst_dir' exists or cannot be created."
   fi
 
 }
@@ -806,11 +802,15 @@ setup_centos_7() {
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
 
+  create_dir "$heplify_root"
+
   case "$HEPLIFY_VERSION" in
     1 ) $cmd_wget --inet4-only --quiet --output-document=$heplify_root/heplify-server \
     "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" ;;
   esac
   check_status "$?"
+  
+  create_heplify_service
 
   $cmd_yum clean all; $cmd_yum makecache
 
@@ -819,9 +819,6 @@ setup_centos_7() {
 
   $cmd_yum -y install $base_pkg_list $mysql_pkg_list
   # check_status "$?"
-
-  create_dir "$heplify_root"
-  create_heplify_service
 
   for svc in ${service_names[@]}; do
     $cmd_chkconfig "$svc" on
@@ -894,6 +891,8 @@ setup_debian_8() {
     1 ) $cmd_wget --inet4-only --quiet --output-document=$heplify_root/heplify-server \
     "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" ;;
   esac
+  
+  create_heplify_service
  
   local original_ifs=$IFS
   IFS=$'|'
@@ -907,7 +906,6 @@ setup_debian_8() {
   DEBIAN_FRONTEND=noninteractive $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq \
     $base_pkg_list $mysql_pkg_list
 
-  create_heplify_service
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_config_dir" "https://github.com/sipcapture/homer-config.git"
