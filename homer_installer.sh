@@ -648,7 +648,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/opt/heplify-server
-ExecStart=/opt/heplify-server/heplify-server
+ExecStart=/opt/heplify-server/heplify-server -c /opt/heplify-server/heplify-server.toml
 ExecStop=/bin/kill ${MAINPID}
 Restart=on-failure
 RestartSec=10s
@@ -833,7 +833,7 @@ setup_centos_7() {
   $cmd_wget --inet4-only --quiet --output-document=/etc/telegraf/telegraf.conf \
   "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telegraf.conf"
   
-  npm install pm2 telestats
+  npm install -g pm2 telestats
   pm2 start telestats -- -c $heplify_root/telestats.conf
   pm2 save && pm2 startup
   
