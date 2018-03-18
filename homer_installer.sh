@@ -800,6 +800,8 @@ setup_centos_7() {
     $cmd_chkconfig "$svc" on
   done
 
+  create_or_update_dir "$heplify_root"
+
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_config_dir" "https://github.com/sipcapture/homer-config.git"
@@ -878,6 +880,7 @@ setup_debian_8() {
   DEBIAN_FRONTEND=noninteractive $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq \
     $base_pkg_list $mysql_pkg_list
 
+  create_or_update_dir "$heplify_root"
   create_heplify_service
   repo_clone_or_update "$src_base_dir" "$src_homer_api_dir" "https://github.com/sipcapture/homer-api.git"
   repo_clone_or_update "$src_base_dir" "$src_homer_ui_dir" "https://github.com/sipcapture/homer-ui.git"
