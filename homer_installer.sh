@@ -616,6 +616,10 @@ config_search_and_replace() {
     -e "s/homer_password/$DB_PASS/g" \
     -e "s/dbmysql/$DB_HOST/g" \
     $heplify_root/telestats.conf
+    
+   $cmd_sed -i \
+    -e "s/heplify/localhost/g" \
+    /etc/telegraf/telegraf.conf
 
   # Apache docroot
   $cmd_sed -i \
