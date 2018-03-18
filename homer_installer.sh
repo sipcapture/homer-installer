@@ -795,6 +795,7 @@ setup_centos_7() {
   local src_homer_config_dir="homer-config"
 
   local cmd_yum=$(locate_cmd "yum")
+  local cmd_curl=$(locate_cmd "curl")
   local cmd_wget=$(locate_cmd "wget")
   local cmd_chkconfig=$(locate_cmd "chkconfig")
   local cmd_service=$(locate_cmd "service")
@@ -806,11 +807,20 @@ setup_centos_7() {
 
   case "$HEPLIFY_VERSION" in
     1 ) $cmd_wget --inet4-only --quiet --output-document=$heplify_root/heplify-server \
-    "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" ;;
+    "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" \
+    && chmod +x $heplify_root/heplify-server;;
   esac
   check_status "$?"
   
   create_heplify_service
+  
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf-1.5.3-1.x86_64.rpm \
+  "https://dl.influxdata.com/telegraf/releases/telegraf-1.5.3-1.x86_64.rpm"
+  && $cmd_yum localinstall /tmp/telegraf-1.5.3-1.x86_64.rpm && rm -rf /tmp/telegraf-1.5.3-1.x86_64.rpm
+  $cmd_curl --silent --location https://rpm.nodesource.com/setup_8.x | sudo bash -
+  $cmd_yum -y install nodejs
+  
+  npm install pm2 telestats
 
   $cmd_yum clean all; $cmd_yum makecache
 
@@ -889,11 +899,20 @@ setup_debian_8() {
 
   case "$HEPLIFY_VERSION" in
     1 ) $cmd_wget --inet4-only --quiet --output-document=$heplify_root/heplify-server \
-    "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" ;;
+    "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" \
+    && chmod +x $heplify_root/heplify-server;;
   esac
   
   create_heplify_service
- 
+
+  $cmd_wget --inet4-only --quiet "https://dl.influxdata.com/telegraf/releases/telegraf_1.5.3-1_amd64.deb" \
+  --output-document=/tmp/telegraf_1.5.3-1_amd64.deb
+  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/telegraf_1.5.3-1_amd64.deb
+  rm -rf /tmp/telegraf_1.5.3-1_amd64.deb
+
+  curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+  $cmd_apt_get install -yqq nodejs && npm install -g pm2 telestats
+
   local original_ifs=$IFS
   IFS=$'|'
   for key_info in "${repo_keys[@]}"; do
