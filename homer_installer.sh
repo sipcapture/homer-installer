@@ -648,7 +648,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/opt/heplify-server
-ExecStart=/opt/heplify-server/heplify-server -c /opt/heplify-server/heplify-server.toml
+ExecStart=/opt/heplify-server/heplify-server -config /opt/heplify-server/heplify-server.toml
 ExecStop=/bin/kill ${MAINPID}
 Restart=on-failure
 RestartSec=10s
