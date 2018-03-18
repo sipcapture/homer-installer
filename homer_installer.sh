@@ -619,6 +619,7 @@ config_search_and_replace() {
     
    $cmd_sed -i \
     -e "s/heplify/localhost/g" \
+    -e "s/telestats/localhost/g" \
     /etc/telegraf/telegraf.conf
 
   # Apache docroot
