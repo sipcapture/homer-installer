@@ -816,7 +816,7 @@ setup_centos_7() {
   
   $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf-1.5.3-1.x86_64.rpm \
   "https://dl.influxdata.com/telegraf/releases/telegraf-1.5.3-1.x86_64.rpm"
-  && $cmd_yum localinstall /tmp/telegraf-1.5.3-1.x86_64.rpm && rm -rf /tmp/telegraf-1.5.3-1.x86_64.rpm
+  $cmd_yum localinstall /tmp/telegraf-1.5.3-1.x86_64.rpm && rm -rf /tmp/telegraf-1.5.3-1.x86_64.rpm
   $cmd_curl --silent --location https://rpm.nodesource.com/setup_8.x | sudo bash -
   $cmd_yum -y install nodejs
   
