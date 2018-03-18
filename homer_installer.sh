@@ -610,6 +610,12 @@ config_search_and_replace() {
     -e "s/HOMER_DB/$DB_HOST/g" \
     -e "s/9060/$LISTEN_PORT/g" \
     $heplify_root/heplify-server.toml
+    
+   $cmd_sed -i \
+    -e "s/homer_user/$DB_USER/g" \
+    -e "s/homer_password/$DB_PASS/g" \
+    -e "s/dbmysql/$DB_HOST/g" \
+    $heplify_root/telestats.conf
 
   # Apache docroot
   $cmd_sed -i \
@@ -817,10 +823,20 @@ setup_centos_7() {
   $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf-1.5.3-1.x86_64.rpm \
   "https://dl.influxdata.com/telegraf/releases/telegraf-1.5.3-1.x86_64.rpm" 
   $cmd_yum localinstall -yqq /tmp/telegraf-1.5.3-1.x86_64.rpm && rm -rf /tmp/telegraf-1.5.3-1.x86_64.rpm
-  $cmd_curl --silent --location https://rpm.nodesource.com/setup_8.x | sudo bash -
+
+  $cmd_curl --silent --location https://rpm.nodesource.com/setup_8.x | bash -
   $cmd_yum -yqq install nodejs
   
+  $cmd_wget --inet4-only --quiet --output-document=$heplify_root/telestats.conf \
+  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telestats.conf"
+  
+  $cmd_wget --inet4-only --quiet --output-document=/etc/telegraf/telegraf.conf \
+  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telegraf.conf"
+  
   npm install pm2 telestats
+  pm2 start telestats -- -c $heplify_root/telestats.conf
+  pm2 save && pm2 startup
+  
 
   $cmd_yum clean all; $cmd_yum makecache
 
@@ -905,13 +921,24 @@ setup_debian_8() {
   
   create_heplify_service
 
-  $cmd_wget --inet4-only --quiet "https://dl.influxdata.com/telegraf/releases/telegraf_1.5.3-1_amd64.deb" \
-  --output-document=/tmp/telegraf_1.5.3-1_amd64.deb
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf_1.5.3-1_amd64.deb \
+  "https://dl.influxdata.com/telegraf/releases/telegraf_1.5.3-1_amd64.deb" 
+  
   $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/telegraf_1.5.3-1_amd64.deb
   rm -rf /tmp/telegraf_1.5.3-1_amd64.deb
 
-  curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-  $cmd_apt_get install -yqq nodejs && npm install -g pm2 telestats
+  curl -sL https://deb.nodesource.com/setup_8.x | bash -
+  $cmd_apt_get install -yqq nodejs
+  
+  $cmd_wget --inet4-only --quiet --output-document=$heplify_root/telestats.conf \
+  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telestats.conf"
+  
+  $cmd_wget --inet4-only --quiet --output-document=/etc/telegraf/telegraf.conf \
+  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telegraf.conf"
+  
+  npm install -g pm2 telestats
+  pm2 start telestats -- -c $heplify_root/telestats.conf
+  pm2 save && pm2 startup
 
   local original_ifs=$IFS
   IFS=$'|'
