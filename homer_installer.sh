@@ -782,7 +782,7 @@ setup_centos_7() {
                        unzip zip zlib zlib-devel bison flex pcre-devel libxml2-devel \
                        sox httpd php php-gd php-mysql php-json git php-mysql php-devel"
   local mysql_pkg_list="libdbi-dbd-mysql perl-DBD-MySQL mysql-community-server mysql-community-client"
-  local -a service_names=("mysqld" "heplify-server" "httpd")
+  local -a service_names=("mysqld" "heplify-server" "httpd" "telegraf")
   local web_cfg_root="/etc/httpd/conf.d"
   local web_doc_root="/var/www/html/homer"
   WEB_ROOT=$web_doc_root # WEB_ROOT used in banner_end function
@@ -873,7 +873,7 @@ setup_debian_8() {
                        php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
                        php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
   local mysql_pkg_list="mysql-server libmysqlclient18"
-  local -a service_names=("mysql" "heplify-server" "apache2")
+  local -a service_names=("mysql" "heplify-server" "apache2" "telegraf")
   local -a repo_keys=(
                        'mysql57|8C718D3B5072E1F5'
                      )
