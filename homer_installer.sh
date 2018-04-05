@@ -818,7 +818,7 @@ setup_centos_7() {
 
   case "$HEPLIFY_VERSION" in
     1 ) $cmd_wget --inet4-only --quiet --output-document=$heplify_root/heplify-server \
-    "https://github.com/sipcapture/heplify-server/releases/download/v1/heplify-server" \
+    "https://github.com/sipcapture/heplify-server/releases/download/0.80/heplify-server" \
     && chmod +x $heplify_root/heplify-server;;
   esac
   check_status "$?"
