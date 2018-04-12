@@ -846,7 +846,7 @@ setup_centos_7() {
   $cmd_wget --inet4-only --quiet --output-document=/tmp/chronograf-1.4.1.3.x86_64.rpm \
   "https://dl.influxdata.com/chronograf/releases/chronograf-1.4.1.3.x86_64.rpm"
   $cmd_yum localinstall -yqq /tmp/chronograf-1.4.1.3.x86_64.rpm && rm -rf /tmp/chronograf-1.4.1.3.x86_64.rpm
-  sudo systemctl start kapacitor
+  sudo systemctl start chronograf
 
   $cmd_curl --silent --location https://rpm.nodesource.com/setup_8.x | bash -
   $cmd_yum -yqq install nodejs
@@ -913,7 +913,7 @@ setup_debian_8() {
                        php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
                        php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
   local mysql_pkg_list="mysql-server libmysqlclient18"
-  local -a service_names=("mysql" "heplify-server" "apache2" "telegraf")
+  local -a service_names=("mysql" "heplify-server" "apache2" "telegraf" "influxdb" "kapacitor" "cronograf")
   local -a repo_keys=(
                        'mysql57|8C718D3B5072E1F5'
                      )
