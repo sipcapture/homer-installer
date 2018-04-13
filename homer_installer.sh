@@ -784,6 +784,9 @@ setup_centos_7() {
   local cmd_wget=$(locate_cmd "wget")
   local cmd_chkconfig=$(locate_cmd "chkconfig")
   local cmd_service=$(locate_cmd "service")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_chown=$(locate_cmd "chown")
 
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
@@ -792,7 +795,9 @@ setup_centos_7() {
     4 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
     "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo" ;;
     5 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v5.0.x-rpms.repo \
-    "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" ;;
+    "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" 
+        local kamailio_modules_path='/usr/lib64/kamailio/modules'
+        ;;
   esac
   check_status "$?"
 
@@ -835,6 +840,11 @@ setup_centos_7() {
 
   config_search_and_replace
   $mnt_script_dir/homer_rotate
+  if [[ $KAMAILIO_VERSION == 5 ]]; then
+    $cmd_sed -i -e "s|^mpath=.*|mpath=\"$kamailio_modules_path\"|g" /etc/kamailio/kamailio.cfg
+    $cmd_mkdir /var/run/kamailio
+    $cmd_chown "kamailio:daemon" /var/run/kamailio
+  fi
 
   for svc in ${service_names[@]}; do
     $cmd_service "$svc" restart
