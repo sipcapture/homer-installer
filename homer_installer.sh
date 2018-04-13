@@ -683,9 +683,9 @@ banner_end() {
 
   local cmd_ip=$(locate_cmd "ip")
   local cmd_head=$(locate_cmd "head")
-  local cmd_cut=$(locate_cmd "cut")
+  local cmd_awk=$(locate_cmd "awk")
 
-  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d' ' -f8)
+  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_awk '{ print $NF }')
 
   echo "*************************************************************"
   echo "      ,;;;;,                                                 "
@@ -784,6 +784,10 @@ setup_centos_7() {
   local cmd_wget=$(locate_cmd "wget")
   local cmd_chkconfig=$(locate_cmd "chkconfig")
   local cmd_service=$(locate_cmd "service")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_chown=$(locate_cmd "chown")
+  local cmd_gunzip=$(locate_cmd "gunzip")
 
   $cmd_yum -q -y install "https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm"
   # check_status "$?"
@@ -792,7 +796,10 @@ setup_centos_7() {
     4 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v4.4.x-rpms.repo \
     "http://download.opensuse.org/repositories/home:/kamailio:/v4.4.x-rpms/CentOS_7/home:kamailio:v4.4.x-rpms.repo" ;;
     5 ) $cmd_wget --inet4-only --quiet --output-document=/etc/yum.repos.d/kamailio:v5.0.x-rpms.repo \
-    "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" ;;
+    "http://download.opensuse.org/repositories/home:/kamailio:/v5.0.x-rpms/CentOS_7/home:kamailio:v5.0.x-rpms.repo" 
+        local kamailio_modules_path='/usr/lib64/kamailio/modules'
+        local kamailio_pkg_list="$kamailio_pkg_list kamailio-geoip GeoIP GeoIP-data"
+        ;;
   esac
   check_status "$?"
 
@@ -835,6 +842,17 @@ setup_centos_7() {
 
   config_search_and_replace
   $mnt_script_dir/homer_rotate
+
+  if [[ $KAMAILIO_VERSION == 5 ]]; then
+    $cmd_sed -i -e "s|^mpath=.*|mpath=\"$kamailio_modules_path\"|g" /etc/kamailio/kamailio.cfg
+    $cmd_mkdir /var/run/kamailio
+    $cmd_chown "kamailio:daemon" /var/run/kamailio
+    $cmd_wget -N -q http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz -O /usr/share/GeoIP/GeoIPCity.dat.gz
+    $cmd_gunzip -f /usr/share/GeoIP/GeoIPCity.dat.gz
+    $cmd_sed -i -e "s|^#\(#.*WITH_HOMER_GEO$\)|\1|g" /etc/kamailio/kamailio.cfg
+    $cmd_sed -i -e "s|/usr/share/GeoIP/GeoIP.dat|/usr/share/GeoIP/GeoIPCity.dat|g" /etc/kamailio/kamailio.cfg
+    $cmd_sed -i -e "/\[mysqld\]/a sql-mode=\"NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLE\"" /etc/my.cnf
+  fi
 
   for svc in ${service_names[@]}; do
     $cmd_service "$svc" restart
