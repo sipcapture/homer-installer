@@ -683,9 +683,11 @@ banner_end() {
 
   local cmd_ip=$(locate_cmd "ip")
   local cmd_head=$(locate_cmd "head")
-  local cmd_cut=$(locate_cmd "cut")
+  # local cmd_cut=$(locate_cmd "cut")
+  local cmd_awk=$(locate_cmd "awk")
 
-  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d' ' -f8)
+  # local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_cut -d' ' -f8)
+  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | $cmd_awk '{ print $NF }')
 
   echo "*************************************************************"
   echo "      ,;;;;,                                                 "
