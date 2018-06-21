@@ -612,14 +612,7 @@ config_search_and_replace() {
     $heplify_root/heplify-server.toml
     
    $cmd_sed -i \
-    -e "s/homer_user/$DB_USER/g" \
-    -e "s/homer_password/$DB_PASS/g" \
-    -e "s/dbmysql/$DB_HOST/g" \
-    $heplify_root/telestats.conf
-    
-   $cmd_sed -i \
     -e "s/heplify/localhost/g" \
-    -e "s/telestats/localhost/g" \
     /etc/telegraf/telegraf.conf
     
    $cmd_sed -i \
@@ -829,39 +822,31 @@ setup_centos_7() {
   
   create_heplify_service
   
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf-1.5.3-1.x86_64.rpm \
-  "https://dl.influxdata.com/telegraf/releases/telegraf-1.5.3-1.x86_64.rpm" 
-  $cmd_yum localinstall -yqq /tmp/telegraf-1.5.3-1.x86_64.rpm && rm -rf /tmp/telegraf-1.5.3-1.x86_64.rpm
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf-1.7.0-1.x86_64.rpm \
+  "https://dl.influxdata.com/telegraf/releases/telegraf-1.7.0-1.x86_64.rpm" 
+  $cmd_yum localinstall -yqq /tmp/telegraf-1.7.0-1.x86_64.rpm && rm -rf /tmp/telegraf-1.7.0-1.x86_64.rpm
 
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/influxdb-1.5.1.x86_64.rpm \
-  "https://dl.influxdata.com/influxdb/releases/influxdb-1.5.1.x86_64.rpm"
-  $cmd_yum localinstall -yqq /tmp/influxdb-1.5.1.x86_64.rpm && rm -rf /tmp/influxdb-1.5.1.x86_64.rpm
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/influxdb-1.5.3.x86_64.rpm \
+  "https://dl.influxdata.com/influxdb/releases/influxdb-1.5.3.x86_64.rpm"
+  $cmd_yum localinstall -yqq /tmp/influxdb-1.5.3.x86_64.rpm && rm -rf /tmp/influxdb-1.5.3.x86_64.rpm
   sudo systemctl start influxdb
 
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/kapacitor-1.4.0.x86_64.rpm \
-  "https://dl.influxdata.com/kapacitor/releases/kapacitor-1.4.0.x86_64.rpm"
-  $cmd_yum localinstall -yqq /tmp/kapacitor-1.4.0.x86_64.rpm && rm -rf /tmp/kapacitor-1.4.0.x86_64.rpm
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/kapacitor-1.5.0.x86_64.rpm \
+  "https://dl.influxdata.com/kapacitor/releases/kapacitor-1.5.0.x86_64.rpm"
+  $cmd_yum localinstall -yqq /tmp/kapacitor-1.5.0.x86_64.rpm && rm -rf /tmp/kapacitor-1.5.0.x86_64.rpm
   sudo systemctl start kapacitor
   
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/chronograf-1.4.1.3.x86_64.rpm \
-  "https://dl.influxdata.com/chronograf/releases/chronograf-1.4.1.3.x86_64.rpm"
-  $cmd_yum localinstall -yqq /tmp/chronograf-1.4.1.3.x86_64.rpm && rm -rf /tmp/chronograf-1.4.1.3.x86_64.rpm
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/chronograf-1.5.0.1.x86_64.rpm \
+  "https://dl.influxdata.com/chronograf/releases/chronograf-1.5.0.1.x86_64.rpm"
+  $cmd_yum localinstall -yqq /tmp/chronograf-1.5.0.1.x86_64.rpm && rm -rf /tmp/chronograf-1.5.0.1.x86_64.rpm
   sudo systemctl start chronograf
 
   $cmd_curl --silent --location https://rpm.nodesource.com/setup_8.x | bash -
   $cmd_yum -yqq install nodejs
   
-  $cmd_wget --inet4-only --quiet --output-document=$heplify_root/telestats.conf \
-  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telestats.conf"
-  
   $cmd_wget --inet4-only --quiet --output-document=/etc/telegraf/telegraf.conf \
-  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telegraf-tick.conf"
+  "https://raw.githubusercontent.com/sipcapture/heplify-server/master/docker/hom5-hep-influx/conf/telegraf.conf"
   
-  npm install -g pm2 telestats
-  pm2 start telestats -- -c $heplify_root/telestats.conf
-  pm2 save && pm2 startup
-  
-
   $cmd_yum clean all; $cmd_yum makecache
 
   $cmd_yum -y update
@@ -913,7 +898,7 @@ setup_debian_8() {
                        php5-cli php5-gd php-pear php5-dev php5-mysql php5-json \
                        php-services-json git wget pwgen rsyslog perl libdbi-perl libclass-dbi-mysql-perl"
   local mysql_pkg_list="mysql-server libmysqlclient18"
-  local -a service_names=("mysql" "heplify-server" "apache2" "telegraf" "influxdb" "kapacitor" "cronograf")
+  local -a service_names=("mysql" "heplify-server" "apache2" "telegraf" "influxdb" "kapacitor" "chronograf")
   local -a repo_keys=(
                        'mysql57|8C718D3B5072E1F5'
                      )
@@ -945,38 +930,31 @@ setup_debian_8() {
   
   create_heplify_service
 
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/influxdb_1.5.1_amd64.deb \
-  "https://dl.influxdata.com/influxdb/releases/influxdb_1.5.1_amd64.deb" 
-  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/influxdb_1.5.1_amd64.deb
-  rm -rf /tmp/influxdb_1.5.1_amd64.deb
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/influxdb_1.5.3_amd64.deb \
+  "https://dl.influxdata.com/influxdb/releases/influxdb_1.5.3_amd64.deb" 
+  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/influxdb_1.5.3_amd64.deb
+  rm -rf /tmp/influxdb_1.5.3_amd64.deb
 
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf_1.5.3-1_amd64.deb \
-  "https://dl.influxdata.com/telegraf/releases/telegraf_1.5.3-1_amd64.deb" 
-  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/telegraf_1.5.3-1_amd64.deb
-  rm -rf /tmp/telegraf_1.5.3-1_amd64.deb
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/telegraf_1.7.0-1_amd64.deb \
+  "https://dl.influxdata.com/telegraf/releases/telegraf_1.7.0-1_amd64.deb" 
+  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/telegraf_1.7.0-1_amd64.deb
+  rm -rf /tmp/telegraf_1.7.0-1_amd64.deb
   
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/kapacitor_1.4.0_amd64.deb \
-  "https://dl.influxdata.com/kapacitor/releases/kapacitor_1.4.0_amd64.deb" 
-  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/kapacitor_1.4.0_amd64.deb
-  rm -rf /tmp/kapacitor_1.4.0_amd64.deb
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/kapacitor_1.5.0_amd64.deb \
+  "https://dl.influxdata.com/kapacitor/releases/kapacitor_1.5.0_amd64.deb" 
+  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/kapacitor_1.5.0_amd64.deb
+  rm -rf /tmp/kapacitor_1.5.0_amd64.deb
   
-  $cmd_wget --inet4-only --quiet --output-document=/tmp/chronograf_1.4.1.3_amd64.deb \
-  "https://dl.influxdata.com/chronograf/releases/chronograf_1.4.1.3_amd64.deb" 
-  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/chronograf_1.4.1.3_amd64.deb
-  rm -rf /tmp/chronograf_1.4.1.3_amd64.deb
+  $cmd_wget --inet4-only --quiet --output-document=/tmp/chronograf_1.5.0.1_amd64.deb \
+  "https://dl.influxdata.com/chronograf/releases/chronograf_1.5.0.1_amd64.deb" 
+  $cmd_apt_get install --no-install-recommends --no-install-suggests -yqq /tmp/chronograf_1.5.0.1_amd64.deb
+  rm -rf /tmp/chronograf_1.5.0.1_amd64.deb
 
   curl -sL https://deb.nodesource.com/setup_8.x | bash -
   $cmd_apt_get install -yqq nodejs
   
-  $cmd_wget --inet4-only --quiet --output-document=$heplify_root/telestats.conf \
-  "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telestats.conf"
-  
   $cmd_wget --inet4-only --quiet --output-document=/etc/telegraf/telegraf.conf \
   "https://github.com/sipcapture/heplify-server/raw/master/docker/homer-heplify/telegraf-tick.conf"
-  
-  npm install -g pm2 telestats
-  pm2 start telestats -- -c $heplify_root/telestats.conf
-  pm2 save && pm2 startup
 
   local original_ifs=$IFS
   IFS=$'|'
