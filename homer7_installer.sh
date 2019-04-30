@@ -66,11 +66,7 @@ GO_HOME=$HOME_DIR/go
 GO_ROOT=/usr/local/go
 ARCH=`uname -m`
 
-
-
-
 #### NO CHANGES BELOW THIS LINE! 
-
 
 VERSION=7.0
 SETUP_ENTRYPOINT=""
@@ -95,82 +91,74 @@ is_root_user() {
 
 
 install_golang() {
-	echo
-	# Check if there's any older version of GO installed on the machine.
-	if [ -d /usr/local/go ]; then
-		echo "...... [ Found an older version of GO ]"
-		printf "Would you like to remove it? [y/N]: "
-		read ans
-		case "$ans" in
-			"y"|"yes"|"Y"|"Yes"|"YES") rm -rf /usr/local/go;;
-			*) echo "...... [ Exiting ]"; exit 0;;
-		esac
-	fi
-	# If the operating system is 64-bit Linux
-	if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
-		PACKAGE=go$GO_VERSION.linux-amd64.tar.gz
-		pushd /tmp > /dev/null
-		echo
-		wget --no-check-certificate https://storage.googleapis.com/golang/$PACKAGE
-		if [ $? -ne 0 ]; then
-			echo "Failed to Download the package! Exiting."
-			exit 1
-		fi
-		tar -C /usr/local -xzf $PACKAGE
-		rm -rf $PACKAGE
-		popd > /dev/null
-		setup
-	fi
-	setup
+  echo
+  if [ -d /usr/local/go ]; then
+    echo "...... [ Found an older version of GO ]"
+    printf "Would you like to remove it? [y/N]: "
+    read ans
+    case "$ans" in
+    	"y"|"yes"|"Y"|"Yes"|"YES") rm -rf /usr/local/go;;
+    	*) return 0;;
+    esac
+  fi
+  # If the operating system is 64-bit Linux
+  if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
+    PACKAGE=go$GO_VERSION.linux-amd64.tar.gz
+    pushd /tmp > /dev/null
+    echo
+    wget --no-check-certificate https://storage.googleapis.com/golang/$PACKAGE
+    if [ $? -ne 0 ]; then
+    	echo "Failed to Download the package! Exiting."
+    	exit 1
+    fi
+    tar -C /usr/local -xzf $PACKAGE
+    rm -rf $PACKAGE
+    popd > /dev/null
+    setup
+  fi
 }
 
 setup() {
-	# Create GOHOME and the required directories
-	if [ ! -d $GO_HOME ]; then
-		mkdir $GO_HOME
-		mkdir -p $GO_HOME/{src,pkg,bin}
-	else
-		mkdir -p $GO_HOME/{src,pkg,bin}
-	fi
-	if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
-		grep -q -F 'export GOPATH=$HOME/go' $HOME/.bashrc || echo 'export GOPATH=$HOME/go' >> $HOME/.bashrc
-		grep -q -F 'export GOROOT=/usr/local/go' $HOME/.bashrc || echo 'export GOROOT=/usr/local/go' >> $HOME/.bashrc
-		grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
-		grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
-	fi
+  if [ ! -d $GO_HOME ]; then
+    mkdir $GO_HOME
+    mkdir -p $GO_HOME/{src,pkg,bin}
+  else
+    mkdir -p $GO_HOME/{src,pkg,bin}
+  fi
+  if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
+    grep -q -F 'export GOPATH=$HOME/go' $HOME/.bashrc || echo 'export GOPATH=$HOME/go' >> $HOME/.bashrc
+    grep -q -F 'export GOROOT=/usr/local/go' $HOME/.bashrc || echo 'export GOROOT=/usr/local/go' >> $HOME/.bashrc
+    grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
+    grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
+  fi
 }
-
-
 have_commands() {
-	# Function to check if we can find the command(s) passed to us
-	# in the systems PATH
-
-	local cmd_list="$1"
-	local -a not_found=() 
-
-	for cmd in $cmd_list; do
-		command -v $cmd >/dev/null 2>&1 || not_found+=("$cmd")
-	done
-
-	if [[ ${#not_found[@]} == 0 ]]; then
-		# All commands found
-		return 0
-	else
-		# Something not found
-		return 1
-	fi
+  # Function to check if we can find the command(s) passed to us
+  # in the systems PATH
+  local cmd_list="$1"
+  local -a not_found=() 
+  
+  for cmd in $cmd_list; do
+    command -v $cmd >/dev/null 2>&1 || not_found+=("$cmd")
+  done
+  
+  if [[ ${#not_found[@]} == 0 ]]; then
+    # All commands found
+    return 0
+  else
+    # Something not found
+    return 1
+  fi
 }
 
 locate_cmd() {
-	# Function to return the full path to the cammnd passed to us
-	# Make sure it exists on the system first or else this exits
-	# the script execution
-
-	local cmd="$1"
-	local valid_cmd=""
-
-	# valid_cmd=$(hash -t $cmd 2>/dev/null)
-	valid_cmd=$(command -v $cmd 2>/dev/null)
+  # Function to return the full path to the cammnd passed to us
+  # Make sure it exists on the system first or else this exits
+  # the script execution
+  local cmd="$1"
+  local valid_cmd=""
+  # valid_cmd=$(hash -t $cmd 2>/dev/null)
+  valid_cmd=$(command -v $cmd 2>/dev/null)
   if [[ ! -z "$valid_cmd" ]]; then
     echo "$valid_cmd"
   else
@@ -270,7 +258,6 @@ repo_clone_or_update() {
   fi
 }
 
-
 create_heplify_service() {
   local sys_systemd_base='/lib/systemd/system'
   local usr_systemd_base='/etc/systemd/system'
@@ -326,11 +313,82 @@ __EOFL__
   fi
 }
 
+write_heplify_conf_file(){
+  local cmd_cat=$(locate_cmd "cat")
+  if [ ! -f $1/$2 ]; then
+    $cmd_cat << __EOFL__ > $1/$2
+HEPAddr         = "0.0.0.0:9060"
+HEPTCPAddr      = ""
+HEPTLSAddr      = "0.0.0.0:9060"
+ESAddr          = ""
+ESDiscovery     = true
+MQDriver        = ""
+MQAddr          = ""
+MQTopic         = ""
+LokiURL         = ""
+LokiBulk        = 200
+LokiTimer       = 2
+LokiBuffer      = 100000
+LokiHEPFilter   = []
+PromAddr        = "0.0.0.0:9096"
+PromTargetIP    = ""
+PromTargetName  = ""
+DBShema         = "homer7"
+DBDriver        = "postgres"
+DBAddr          = "localhost:5432"
+DBUser          = "$DB_USER"
+DBPass          = "$DB_PASS"
+DBDataTable     = "homer_data"
+DBConfTable     = "homer_config"
+DBTableSpace    = ""
+DBBulk          = 200
+DBTimer         = 2
+DBBuffer        = 400000
+DBWorker        = 8
+DBRotate        = true
+DBPartLog       = "2h"
+DBPartSip       = "1h"
+DBPartQos       = "6h"
+DBDropDays      = 14
+DBDropOnStart   = false
+Dedup           = false
+DiscardMethod   = []
+AlegIDs         = []
+LogDbg          = ""
+LogLvl          = "info"
+LogStd          = false
+LogSys          = false
+Config          = "./heplify-server.toml"
+ConfigHTTPAddr  = ""
+__EOFL__
+  fi
+}
+
+setup_heplify_server(){
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_grep=$(locate_cmd "grep")
+  local cmd_cut=$(locate_cmd "cut")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_cd=$(locate_cmd "cd")
+  local cmd_chmod=$(locate_cmd "chmod")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local heplify_base_dir="/opt/heplify-server"
+  if [[ ! -d "$heplify_base_dir" ]]; then
+  	$cmd_mkdir -p "$heplify_base_dir"
+  fi
+  $cmd_cd $heplify_base_dir
+  LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/heplify-server/releases/latest | $cmd_grep \"releases/tag\""
+  DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
+  $cmd_wget "$DOWNLOAD_URL/heplify-server"
+  `$cmd_chmod +x "heplify_base_dir/heplify-server"`
+  write_heplify_conf_file "$heplify_base_dir" "heplify-server.toml"
+}
+
 create_influxdb_service() {
   local sys_systemd_base='/lib/systemd/system'
   local usr_systemd_base='/etc/systemd/system'
   local sys_influxdb_svc='influxdb.service'
-
   local cmd_systemctl=$(locate_cmd "systemctl")
   local cmd_cat=$(locate_cmd "cat")
   local cmd_mkdir=$(locate_cmd "mkdir")
@@ -362,7 +420,6 @@ __EOFL__
     $cmd_systemctl start $sys_influxdb_svc 
   fi
 }
-
 
 create_homer_app_service() {
   local sys_systemd_base='/lib/systemd/system'
@@ -536,18 +593,18 @@ start_app() {
 }
 
 install_npm(){
-	local cmd_curl=$(locate_cmd "curl")
-  	local cmd_apt_key=$(locate_cmd "apt-key")
-	$cmd_apt_key -sL https://deb.nodesource.com/setup_10.x | bash -
-	$cmd_apt_key install -y nodejs
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_apt_key=$(locate_cmd "apt-key")
+  $cmd_apt_key -sL https://deb.nodesource.com/setup_10.x | bash -
+  $cmd_apt_key install -y nodejs
 }
 
 create_postgres_user_database(){
-	su -c "psql  -c \"create user $DB_USER with password '$DB_PASS'\"" postgres
-	su -c "psql  -c \"create database homer_config\"" postgres
-	su -c "psql  -c \"create database homer_data\"" postgres
-	su -c "psql  -c \"GRANT ALL PRIVILEGES ON DATABASE \"homer_config\" to $DB_USER;\"" postgres
-	su -c "psql  -c \"GRANT ALL PRIVILEGES ON DATABASE \"homer_data\" to $DB_USER;\"" postgres
+  su -c "psql  -c \"create user $DB_USER with password '$DB_PASS'\"" postgres
+  su -c "psql  -c \"create database homer_config\"" postgres
+  su -c "psql  -c \"create database homer_data\"" postgres
+  su -c "psql  -c \"GRANT ALL PRIVILEGES ON DATABASE \"homer_config\" to $DB_USER;\"" postgres
+  su -c "psql  -c \"GRANT ALL PRIVILEGES ON DATABASE \"homer_data\" to $DB_USER;\"" postgres
 }
 
 
@@ -569,23 +626,21 @@ install_heplify_server(){
   create_heplify_service
 }
 
-
 install_homer_app(){
-	local cmd_npm=$(locate_cmd "npm")
-	local src_base_dir="/opt/"
-	local src_homer_app_dir="homer-app"
-	repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app"
-	cd "$src_base_dir/$src_homer_app_dir"
-	sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-	sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-	$cmd_npm install && $cmd_npm install -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
-	local cmd_knex=$(locate_cmd "knex")
-	$cmd_knext migrate:latest
-	$cmd_knext migrate:latest
-	$cmd_npm run build
-	create_homer_app_service
+  local cmd_npm=$(locate_cmd "npm")
+  local src_base_dir="/opt/"
+  local src_homer_app_dir="homer-app"
+  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app"
+  cd "$src_base_dir/$src_homer_app_dir"
+  sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
+  sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
+  $cmd_npm install && $cmd_npm install -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
+  local cmd_knex=$(locate_cmd "knex")
+  $cmd_knext migrate:latest
+  $cmd_knext migrate:latest
+  $cmd_npm run build
+  create_homer_app_service
 }
-
 
 setup_influxdb(){
   local src_base_dir="/usr/src/"
@@ -675,8 +730,14 @@ setup_debian_9() {
   $cmd_service start postgresql
 
   create_postgres_user_database
-  install_golang
-  install_heplify_server
+  printf "Press [y/Y] to install heplify from source along with Golang and [n/N] to use binary : "
+  printf "--> default use binary [y/N]: "
+  read HEPLIFY_MEHTHOD 
+  case "$HEPLIFY_MEHTHOD" in 
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server && install_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") setup_heplify_server;;
+          *) setup_heplify_server;;
+  esac
   install_homer_app
   printf "Would you like to install influxdb and grafana? [y/N]: "
   read INSTALL_INFLUXDB 
