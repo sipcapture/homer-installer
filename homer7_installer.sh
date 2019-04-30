@@ -131,6 +131,7 @@ setup() {
     grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
     grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
   fi
+  echo "Go setup done"
   install_heplify_server
 }
 have_commands() {
@@ -609,20 +610,25 @@ create_postgres_user_database(){
 
 
 install_heplify_server(){
+  echo "installing server"
   local cmd_go="/usr/local/go/bin/go"
   local cmd_cp=$(locate_cmd "cp")
   local cmd_sed=$(locate_cmd "sed")
   local cmd_cd=$(locate_cmd "cd")
   local src_base_dir="/opt/"
   local src_heplify_dir="heplify-server"
+  echo "heryye"
   repo_clone_or_update "$src_base_dir" "$src_heplify_dir" "https://github.com/sipcapture/heplify-server"
+  echo "there"
 
   $cmd_cd "$src_base_dir/$src_heplify_dir/"
   $cmd_cp -f "$src_base_dir/$src_heplify_dir/example/homer7_config/heplify-server.toml" "./"
   $cmd_sed -i -e "s/DBUser          = \"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
   $cmd_sed -i -e "s/DBPass          = \"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
   $cmd_sed -i -e "s/PromAddr        = \"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
+  echo "jack"
   $cmd_go build "cmd/heplify-server/heplify-server.go"
+  echo "hammer"
   create_heplify_service
 }
 
@@ -682,16 +688,22 @@ setup_centos_7() {
   $cmd_service start postgresql-10
   $cmd_service enable postgresql-10
   create_postgres_user_database
-  install_golang
-  install_heplify_server
-  install_homer_app
-  printf "Would you like to install influxdb and graphana? [y/N]: "
-  read ans
-  case "$ans" in
-	  "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
-	  *) echo "...... [ Exiting ]"; exit 0;;
+  create_postgres_user_database
+  echo "Press [y/Y] to install heplify from source along with Golang and [n/N] to use binary,"
+  printf "default use binary: "
+  read HEPLIFY_MEHTHOD
+  case "$HEPLIFY_MEHTHOD" in
+          "y"|"yes"|"Y"|"Yes"|"YES") install_golang;;
+          "n"|"no"|"N"|"No"|"NO") setup_heplify_server;;
+          *) setup_heplify_server;;
   esac
-
+  install_homer_app
+  printf "Would you like to install influxdb and grafana? [y/N]: "
+  read INSTALL_INFLUXDB
+  case "$INSTALL_INFLUXDB" in
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+          *) echo "...... [ Exiting ]"; echo;;
+  esac
 }
 
 setup_debian_9() {
