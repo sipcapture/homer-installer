@@ -131,6 +131,7 @@ setup() {
     grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
     grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
   fi
+  install_heplify_server
 }
 have_commands() {
   # Function to check if we can find the command(s) passed to us
@@ -381,8 +382,9 @@ setup_heplify_server(){
   LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/heplify-server/releases/latest | $cmd_grep \"releases/tag\""
   DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
   $cmd_wget "$DOWNLOAD_URL/heplify-server"
-  `$cmd_chmod +x "heplify_base_dir/heplify-server"`
+  `$cmd_chmod +x "$heplify_base_dir/heplify-server"`
   write_heplify_conf_file "$heplify_base_dir" "heplify-server.toml"
+  create_heplify_service
 }
 
 create_influxdb_service() {
@@ -414,9 +416,7 @@ __EOFL__
       check_status "$?"
     fi
     $cmd_systemctl daemon-reload
-    check_status "$?"
     $cmd_systemctl enable $sys_influxdb_svc 
-    check_status "$?"
     $cmd_systemctl start $sys_influxdb_svc 
   fi
 }
@@ -550,9 +550,9 @@ banner_end() {
   echo "     * Send HEP/EEP Encapsulated Packets:"
   echo "         hep://$my_primary_ip:$LISTEN_PORT"
   echo
-  if [[ ! -z "$INSTALL_INFLUXDB" ]] ; then
-     echo "     * Send Influxdb:"
-     echo "         http://$my_primary_ip:$INFLUXDB_LISTEN_PORT"
+  if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
+    echo "     * Access INFLUXDB UI:"
+    echo "         http://$my_primary_ip:$INFLUXDB_LISTEN_PORT"
   fi
   echo
   echo "**************************************************************"
@@ -730,11 +730,11 @@ setup_debian_9() {
   $cmd_service start postgresql
 
   create_postgres_user_database
-  printf "Press [y/Y] to install heplify from source along with Golang and [n/N] to use binary : "
-  printf "--> default use binary [y/N]: "
+  echo "Press [y/Y] to install heplify from source along with Golang and [n/N] to use binary,"
+  printf "default use binary: "
   read HEPLIFY_MEHTHOD 
   case "$HEPLIFY_MEHTHOD" in 
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server && install_heplify_server;;
+          "y"|"yes"|"Y"|"Yes"|"YES") install_golang;;
           "n"|"no"|"N"|"No"|"NO") setup_heplify_server;;
           *) setup_heplify_server;;
   esac
