@@ -332,6 +332,44 @@ __EOFL__
   fi
 }
 
+create_influxdb_service() {
+  local sys_systemd_base='/lib/systemd/system'
+  local usr_systemd_base='/etc/systemd/system'
+  local sys_influxdb_svc='influxdb.service'
+
+  local cmd_systemctl=$(locate_cmd "systemctl")
+  local cmd_cat=$(locate_cmd "cat")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+
+  if [ -d $sys_systemd_base ]; then
+    if [ ! -f $sys_systemd_base/$sys_influxdb_svc ]; then
+      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_influxdb_svc
+[Unit]
+Description=InfluxDB is an open-source, distributed, time series database
+Documentation=https://docs.influxdata.com/influxdb/
+After=network-online.target
+
+[Service]
+LimitNOFILE=65536
+ExecStart=/usr/local/bin/influxd
+KillMode=control-group
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+Alias=influxd.service
+__EOFL__
+      check_status "$?"
+    fi
+    $cmd_systemctl daemon-reload
+    check_status "$?"
+    $cmd_systemctl enable $sys_influxdb_svc 
+    check_status "$?"
+    $cmd_systemctl start $sys_influxdb_svc 
+    check_status "$?"
+  fi
+}
+
 
 create_homer_app_service() {
   local sys_systemd_base='/lib/systemd/system'
@@ -516,7 +554,7 @@ create_postgres_user_database(){
 
 
 install_heplify_server(){
-  local cmd_go=$(locate_cmd "go")
+  local cmd_go=$("/usr/local/go/bin/go)
   local cmd_cp=$(locate_cmd "cp")
   local cmd_sed=$(locate_cmd "sed")
   local cmd_cd=$(locate_cmd "cd")
@@ -528,6 +566,7 @@ install_heplify_server(){
   $cmd_cp -f "$src_base_dir/$src_heplify_dir/example/homer7_config/heplify-server.toml" "./"
   $cmd_sed -i -e "s/DBUser          = \"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
   $cmd_sed -i -e "s/DBPass          = \"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
+  $cmd_sed -i -e "s/PromAddr          = \"\"/PromAddr          = \"0.0.0.0:9096\"/g" heplify-server.toml
   $cmd_go build "cmd/heplify-server/heplify-server.go"
   create_heplify_service
 }
@@ -547,6 +586,22 @@ install_homer_app(){
 	$cmd_knext migrate:latest
 	$cmd_npm run build
 	create_homer_app_service
+}
+
+
+setup_influxdb(){
+  local src_base_dir="/usr/src/"
+  local cmd_wget=$(locate_cmd "wget")
+  local md_cd=$(locate_cmd "cd")
+  local cmd_tar=$(locate_cmd "tar")
+  local cmd_cp=$(locate_cmd "cp")
+  local cmd_influx=$(locate_cmd "influx")
+  $cmd_cd $src_base_dir
+  $cmd_wget https://dl.influxdata.com/influxdb/releases/influxdb_2.0.0-alpha.8_linux_amd64.tar.gz
+  $cmd_tar xvzf influxdb_2.0.0-alpha.8_linux_amd64.tar.gz
+  $cmd_cp influxdb_2.0.0-alpha.8_linux_amd64/{influx,influxd} /usr/local/bin/
+  create_influxdb_service
+  $cmd_influx setup
 }
 
 
@@ -577,6 +632,13 @@ setup_centos_7() {
   install_golang
   install_heplify_server
   install_homer_app
+  printf "Would you like to install influxdb and graphana? [y/N]: "
+  read ans
+  case "$ans" in
+	  "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+	  *) echo "...... [ Exiting ]"; exit 0;;
+  esac
+
 }
 
 
@@ -601,7 +663,6 @@ setup_debian_9() {
   $cmd_curl -sL https://deb.nodesource.com/setup_10.x | bash -
   $cmd_apt_get install -y nodejs
 
-
   echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
   local original_ifs=$IFS
@@ -623,6 +684,12 @@ setup_debian_9() {
   install_golang
   install_heplify_server
   install_homer_app
+  printf "Would you like to install influxdb and grafana? [y/N]: "
+  read ans
+  case "$ans" in 
+	  "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+	  *) echo "...... [ Exiting ]"; exit 0;;
+  esac
 }
 
 ######################################################################
