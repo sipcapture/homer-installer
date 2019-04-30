@@ -56,6 +56,8 @@ DB_USER="homer"
 DB_PASS="v3tevjaqf9krwxd"
 DB_HOST="localhost"
 LISTEN_PORT="9060"
+INFLUXDB_LISTEN_PORT="9999"
+INSTALL_INFLUXDB=""
 
 GO_VERSION="1.12.4"
 OS=`uname -s`
@@ -69,17 +71,12 @@ ARCH=`uname -m`
 
 #### NO CHANGES BELOW THIS LINE! 
 
-DB_ADMIN_USER="root"
-DB_ADMIN_PASS=""
-DB_ADMIN_TEMP_PASS=""
 
 VERSION=7.0
 SETUP_ENTRYPOINT=""
 OS=""
 DISTRO=""
 DISTRO_VERSION=""
-WEB_ROOT=""
-KAMAILIO_VERSION="5"
 
 ######################################################################
 #
@@ -363,7 +360,6 @@ __EOFL__
     $cmd_systemctl enable $sys_influxdb_svc 
     check_status "$?"
     $cmd_systemctl start $sys_influxdb_svc 
-    check_status "$?"
   fi
 }
 
@@ -496,6 +492,11 @@ banner_end() {
   echo
   echo "     * Send HEP/EEP Encapsulated Packets:"
   echo "         hep://$my_primary_ip:$LISTEN_PORT"
+  echo
+  if [[ ! -z "$INSTALL_INFLUXDB" ]] ; then
+     echo "     * Send Influxdb:"
+     echo "         http://$my_primary_ip:$INFLUXDB_LISTEN_PORT"
+  fi
   echo
   echo "**************************************************************"
   echo
@@ -638,8 +639,6 @@ setup_centos_7() {
 
 }
 
-
-
 setup_debian_9() {
   local base_pkg_list="software-properties-common make cmake gcc g++"
         local -a repo_keys=(
@@ -680,10 +679,10 @@ setup_debian_9() {
   install_heplify_server
   install_homer_app
   printf "Would you like to install influxdb and grafana? [y/N]: "
-  read ans
-  case "$ans" in 
+  read INSTALL_INFLUXDB 
+  case "$INSTALL_INFLUXDB" in 
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
-          *) echo "...... [ Exiting ]"; exit 0;;
+          *) echo "...... [ Exiting ]"; echo;;
   esac
 }
 
