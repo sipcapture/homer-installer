@@ -123,7 +123,6 @@ install_golang() {
 		rm -rf $PACKAGE
 		popd > /dev/null
 		setup
-		exit 0
 	fi
 	setup
 }
@@ -142,8 +141,6 @@ setup() {
 		grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
 		grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
 	fi
-	
-	#PATH="$PATH:/usr/local/go/bin"
 }
 
 
@@ -554,7 +551,6 @@ create_postgres_user_database(){
 
 
 install_heplify_server(){
-  echo "Jack hammer"
   local cmd_go="/usr/local/go/bin/go"
   local cmd_cp=$(locate_cmd "cp")
   local cmd_sed=$(locate_cmd "sed")
@@ -670,7 +666,6 @@ setup_debian_9() {
   for key_info in "${repo_keys[@]}"; do
           read -r repo key <<< "$key_info"
           $cmd_apt_key adv --recv-keys --keyserver hkp://ha.pool.sks-keyservers.net:80 $key
-          #echo $killer
   done
   IFS=$original_ifs
 
