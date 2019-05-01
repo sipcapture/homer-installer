@@ -131,7 +131,6 @@ setup() {
     grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
     grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
   fi
-  echo "Go setup done"
   install_heplify_server
 }
 have_commands() {
@@ -554,6 +553,8 @@ banner_end() {
   if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
     echo "     * Access INFLUXDB UI:"
     echo "         http://$my_primary_ip:$INFLUXDB_LISTEN_PORT"
+    echo "     * Configure Scapper in Influxdb with URL:"
+    echo "         http://$my_primary_ip:9096"
   fi
   echo
   echo "**************************************************************"
@@ -610,25 +611,21 @@ create_postgres_user_database(){
 
 
 install_heplify_server(){
-  echo "installing server"
-  local cmd_go="/usr/local/go/bin/go"
+  PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/local/go/bin  
+  local cmd_go=$(locate_cmd "go")
   local cmd_cp=$(locate_cmd "cp")
   local cmd_sed=$(locate_cmd "sed")
   local cmd_cd=$(locate_cmd "cd")
   local src_base_dir="/opt/"
   local src_heplify_dir="heplify-server"
-  echo "heryye"
   repo_clone_or_update "$src_base_dir" "$src_heplify_dir" "https://github.com/sipcapture/heplify-server"
-  echo "there"
 
   $cmd_cd "$src_base_dir/$src_heplify_dir/"
   $cmd_cp -f "$src_base_dir/$src_heplify_dir/example/homer7_config/heplify-server.toml" "./"
   $cmd_sed -i -e "s/DBUser          = \"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
   $cmd_sed -i -e "s/DBPass          = \"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
   $cmd_sed -i -e "s/PromAddr        = \"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
-  echo "jack"
   $cmd_go build "cmd/heplify-server/heplify-server.go"
-  echo "hammer"
   create_heplify_service
 }
 
@@ -660,6 +657,8 @@ setup_influxdb(){
   $cmd_cp influxdb_2.0.0-alpha.8_linux_amd64/{influx,influxd} /usr/local/bin/
   local cmd_influx=$(locate_cmd "influx")
   create_influxdb_service
+  #lets wait for influxdb to start
+  sleep 10
   $cmd_influx setup
 }
 
