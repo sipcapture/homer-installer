@@ -9,7 +9,8 @@
 # --------------------------------------------------------------------------------
 #
 #  Copyright notice:
-#
+# 
+#  (c) 2011-2019 QXIP BV, Amsterdam NL
 #  (c) 2011-2016 Lorenzo Mangani <lorenzo.mangani@gmail.com>
 #  (c) 2011-2016 Alexandr Dubovikov <alexandr.dubovikov@gmail.com>
 #
