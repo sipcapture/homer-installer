@@ -1,4 +1,4 @@
-![Logo](http://sipcapture.org/data/images/sipcapture_header.png)
+<img src="https://user-images.githubusercontent.com/1423657/55069501-8348c400-5084-11e9-9931-fefe0f9874a7.png" width=300 />
 
 # __HOMER 7__  Installer
 This document provides guidance and details to get HOMER 7 installed stand-alone using scripts or packages
@@ -32,9 +32,9 @@ Supported OS:
 Execute the following command and follow the interactive prompts to install:
 ```
 cd /usr/src
-wget https://cdn.rawgit.com/sipcapture/homer-installer/homer7/homer7_installer.sh
-chmod +x homer7_installer.sh
-./homer7_installer.sh
+wget https://cdn.rawgit.com/sipcapture/homer-installer/master/homer_installer.sh
+chmod +x homer_installer.sh
+./homer_installer.sh
 ```
 
 ### Notes:
@@ -53,7 +53,7 @@ Contributors and Contributions to our project are always welcome! If you intend 
 
 *Captagent is released under GNU GPLv3 license*
 
-*(C) 2008-2016 [SIPCAPTURE](http://sipcapture.org) & [QXIP BV](http://qxip.net)*
+*(C) 2008-2019 [SIPCAPTURE](http://sipcapture.org) & [QXIP BV](http://qxip.net)*
 
 ----------
 
