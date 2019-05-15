@@ -1,7 +1,7 @@
 ![Logo](http://sipcapture.org/data/images/sipcapture_header.png)
 
-# __HOMER 5__  Installer
-This document provides guidance and details to get HOMER 5 installed stand-alone using scripts or packages
+# __HOMER 7__  Installer
+This document provides guidance and details to get HOMER 7 installed stand-alone using scripts or packages
 
 WARNING: Homer is rock-solid, while the installers and packages are experimental. Use at your own risk!<br>For a reliable and fine-tuned setup please carefully review each element and/or contact support@sipcapture.org for professional assistance.
 
@@ -16,22 +16,25 @@ Available Methods:
 
 ## :page_with_curl: Bash Installer
 The baseline installer expects a Vanilla OS and will install and configure:
-* Homer 5.x
-* Kamailio 4.4
-* MySQL 5.7
-* Apache2 + PHP5
+* Homer-App 7.x
+* Node.js 10.15.3
+* PostgreSQL 10
+* Golang 1.12.4(Optional)
+* Heplify-Server
+* Influxdb 2.x(Optional)
+
 
 Supported OS:
-* Debian 8
+* Debian 9
 * CentOS 7
 
 ### Run & Install:
 Execute the following command and follow the interactive prompts to install:
 ```
 cd /usr/src
-wget https://cdn.rawgit.com/sipcapture/homer-installer/master/homer_installer.sh
-chmod +x homer_installer.sh
-./homer_installer.sh
+wget https://cdn.rawgit.com/sipcapture/homer-installer/homer7/homer7_installer.sh
+chmod +x homer7_installer.sh
+./homer7_installer.sh
 ```
 
 ### Notes:
