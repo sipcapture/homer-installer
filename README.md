@@ -19,9 +19,9 @@ The baseline installer expects a Vanilla OS and will install and configure:
 * Homer-App 7.x
 * Node.js 10.15.3
 * PostgreSQL 10
-* Golang 1.12.4(Optional)
+* Golang 1.12.4 (Optional)
 * Heplify-Server
-* Influxdb 2.x(Optional)
+* Influxdb 2.x (Optional)
 
 
 Supported OS:

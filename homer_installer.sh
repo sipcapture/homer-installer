@@ -54,7 +54,7 @@ my_pid=$$
 
 # HOMER Options, defaults
 DB_USER="homer"
-DB_PASS="v3tevjaqf9krwxd"
+DB_PASS=$(dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g')
 DB_HOST="localhost"
 LISTEN_PORT="9060"
 INFLUXDB_LISTEN_PORT="9999"
@@ -263,7 +263,7 @@ repo_clone_or_update() {
 create_heplify_service() {
   local sys_systemd_base='/lib/systemd/system'
   local usr_systemd_base='/etc/systemd/system'
-  local sys_heplify_svc='heplify.service'
+  local sys_heplify_svc='heplify-server.service'
   local sys_postgresql_svc=''
 
   local cmd_systemctl=$(locate_cmd "systemctl")
@@ -425,7 +425,7 @@ __EOFL__
 create_homer_app_service() {
   local sys_systemd_base='/lib/systemd/system'
   local usr_systemd_base='/etc/systemd/system'
-  local sys_homerapp_svc='homerapp.service'
+  local sys_homerapp_svc='homer-app.service'
   local sys_postgresql_svc=''
 
   local cmd_systemctl=$(locate_cmd "systemctl")
