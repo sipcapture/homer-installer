@@ -641,7 +641,7 @@ install_homer_app(){
   $cmd_npm install && $cmd_npm install -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
   local cmd_knex=$(locate_cmd "knex")
   $cmd_knext migrate:latest
-  $cmd_knext migrate:latest
+  $cmd_knext seed:run
   $cmd_npm run build
   create_homer_app_service
 }
