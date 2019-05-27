@@ -180,7 +180,7 @@ is_supported_os() {
 
   case "$os_type" in
     linux* ) OS="Linux"
-             minimal_command_list="lsb_release wget curl dirmngr git"
+             minimal_command_list="lsb_release wget curl git"
              if ! have_commands "$minimal_command_list"; then
                echo "ERROR: You need the following minimal set of commands installed:"
                echo ""
@@ -315,57 +315,6 @@ __EOFL__
   fi
 }
 
-write_heplify_conf_file(){
-  local cmd_cat=$(locate_cmd "cat")
-  if [ ! -f $1/$2 ]; then
-    $cmd_cat << __EOFL__ > $1/$2
-HEPAddr         = "0.0.0.0:9060"
-HEPTCPAddr      = ""
-HEPTLSAddr      = "0.0.0.0:9060"
-ESAddr          = ""
-ESDiscovery     = true
-MQDriver        = ""
-MQAddr          = ""
-MQTopic         = ""
-LokiURL         = ""
-LokiBulk        = 200
-LokiTimer       = 2
-LokiBuffer      = 100000
-LokiHEPFilter   = []
-PromAddr        = "0.0.0.0:9096"
-PromTargetIP    = ""
-PromTargetName  = ""
-DBShema         = "homer7"
-DBDriver        = "postgres"
-DBAddr          = "localhost:5432"
-DBUser          = "$DB_USER"
-DBPass          = "$DB_PASS"
-DBDataTable     = "homer_data"
-DBConfTable     = "homer_config"
-DBTableSpace    = ""
-DBBulk          = 200
-DBTimer         = 2
-DBBuffer        = 400000
-DBWorker        = 8
-DBRotate        = true
-DBPartLog       = "2h"
-DBPartSip       = "1h"
-DBPartQos       = "6h"
-DBDropDays      = 14
-DBDropOnStart   = false
-Dedup           = false
-DiscardMethod   = []
-AlegIDs         = []
-LogDbg          = ""
-LogLvl          = "info"
-LogStd          = false
-LogSys          = false
-Config          = "./heplify-server.toml"
-ConfigHTTPAddr  = ""
-__EOFL__
-  fi
-}
-
 setup_heplify_server(){
   local cmd_curl=$(locate_cmd "curl")
   local cmd_wget=$(locate_cmd "wget")
@@ -384,7 +333,10 @@ setup_heplify_server(){
   DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
   $cmd_wget "$DOWNLOAD_URL/heplify-server"
   `$cmd_chmod +x "$heplify_base_dir/heplify-server"`
-  write_heplify_conf_file "$heplify_base_dir" "heplify-server.toml"
+  $cmd_wget https://raw.githubusercontent.com/sipcapture/heplify-server/master/example/homer7_config/heplify-server.toml
+  $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
+  $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
+  $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
   create_heplify_service
 }
 
@@ -595,21 +547,16 @@ start_app() {
   exit 0
 }
 
-install_npm(){
-  local cmd_curl=$(locate_cmd "curl")
-  local cmd_apt_key=$(locate_cmd "apt-key")
-  $cmd_apt_key -sL https://deb.nodesource.com/setup_10.x | bash -
-  $cmd_apt_key install -y nodejs
-}
-
 create_postgres_user_database(){
-  su -c "psql  -c \"create user $DB_USER with password '$DB_PASS'\"" postgres
-  su -c "psql  -c \"create database homer_config\"" postgres
-  su -c "psql  -c \"create database homer_data\"" postgres
-  su -c "psql  -c \"GRANT ALL PRIVILEGES ON DATABASE \"homer_config\" to $DB_USER;\"" postgres
-  su -c "psql  -c \"GRANT ALL PRIVILEGES ON DATABASE \"homer_data\" to $DB_USER;\"" postgres
+  cwd=$(pwd)
+  cd /tmp
+  sudo -u postgres psql -c "CREATE DATABASE homer_config;";
+  sudo -u postgres psql -c "CREATE DATABASE homer_data;";
+  sudo -u postgres psql -c "CREATE ROLE homer WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer;"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer;"
+  cd $cwd
 }
-
 
 install_heplify_server(){
   PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/local/go/bin  
@@ -623,9 +570,9 @@ install_heplify_server(){
 
   $cmd_cd "$src_base_dir/$src_heplify_dir/"
   $cmd_cp -f "$src_base_dir/$src_heplify_dir/example/homer7_config/heplify-server.toml" "./"
-  $cmd_sed -i -e "s/DBUser          = \"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
-  $cmd_sed -i -e "s/DBPass          = \"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
-  $cmd_sed -i -e "s/PromAddr        = \"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
+  $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
+  $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
+  $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
   $cmd_go build "cmd/heplify-server/heplify-server.go"
   create_heplify_service
 }
@@ -635,13 +582,15 @@ install_homer_app(){
   local src_base_dir="/opt/"
   local src_homer_app_dir="homer-app"
   repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app"
+  echo "Clone done"
+  echo "Installing Homer-App"
   cd "$src_base_dir/$src_homer_app_dir"
   sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
   sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
   $cmd_npm install && $cmd_npm install -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
   local cmd_knex=$(locate_cmd "knex")
-  $cmd_knext migrate:latest
-  $cmd_knext seed:run
+  $cmd_knex migrate:latest
+  $cmd_knex seed:run
   $cmd_npm run build
   create_homer_app_service
 }
@@ -668,36 +617,44 @@ setup_centos_7() {
   # This is the main entrypoint for setup of sipcapture/homer on a CentOS 7
   # system
 
-  local base_pkg_list="wget curl mlocate"
+  local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++"
   local src_base_dir="/usr/src"
 
   local cmd_yum=$(locate_cmd "yum")
   local cmd_wget=$(locate_cmd "wget")
   local cmd_service=$(locate_cmd "systemctl")
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_iptables=$(locate_cmd "iptables")
   
   $cmd_yum install -y $base_pkg_list
 
-  $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | bash -
+  $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
+  $cmd_yum install -y nodejs
 
   $cmd_yum -q -y install "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64/pgdg-centos11-11-2.noarch.rpm"
   $cmd_yum install -y postgresql10-server postgresql10
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-11-setup)"
+  local cmd_locatepostgre="$(locate postgresql-10-setup)"
   $cmd_locatepostgre initdb
-  $cmd_service start postgresql-10
-  $cmd_service enable postgresql-10
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
+  $cmd_service daemon-reload
+  $cmd_service restart postgresql-10
   create_postgres_user_database
-  create_postgres_user_database
-  echo "Press [y/Y] to install heplify from source along with Golang and [n/N] to use binary,"
+  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
   printf "default use binary: "
   read HEPLIFY_MEHTHOD
   case "$HEPLIFY_MEHTHOD" in
-          "y"|"yes"|"Y"|"Yes"|"YES") install_golang;;
-          "n"|"no"|"N"|"No"|"NO") setup_heplify_server;;
-          *) setup_heplify_server;;
+	  "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+	  "n"|"no"|"N"|"No"|"NO") install_golang;;
+	  *) setup_heplify_server;;
   esac
   install_homer_app
+  echo "Flushing iptables"
+  $cmd_iptables -F
+  echo "Done"
   printf "Would you like to install influxdb and grafana? [y/N]: "
   read INSTALL_INFLUXDB
   case "$INSTALL_INFLUXDB" in
@@ -707,47 +664,42 @@ setup_centos_7() {
 }
 
 setup_debian_9() {
-  local base_pkg_list="software-properties-common make cmake gcc g++"
-        local -a repo_keys=(
-        'postgres|ACCC4CF8'
-        )
-
+  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo"
   local src_base_dir="/usr/src"
   local cmd_apt_get=$(locate_cmd "apt-get")
+  local cmd_wget=$(locate_cmd "wget")
   local cmd_apt_key=$(locate_cmd "apt-key")
   local cmd_service=$(locate_cmd "systemctl")
   local cmd_curl=$(locate_cmd "curl")
   local cmd_rm=$(locate_cmd "rm")
   local cmd_ln=$(locate_cmd "ln")
+  local cmd_wget=$(locate_cmd "wget")
+
+  $cmd_apt_get update && $cmd_apt_get upgrade -y
 
   $cmd_apt_get install -y $base_pkg_list
 
   $cmd_curl -sL https://deb.nodesource.com/setup_10.x | bash -
   $cmd_apt_get install -y nodejs
 
+  $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo $cmd_apt_key add -
+
   echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
-  local original_ifs=$IFS
-  IFS=$'|'
-  for key_info in "${repo_keys[@]}"; do
-          read -r repo key <<< "$key_info"
-          $cmd_apt_key adv --recv-keys --keyserver hkp://ha.pool.sks-keyservers.net:80 $key
-  done
-  IFS=$original_ifs
-
-  $cmd_apt_get update -qq
+  $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql-10 $base_pkg_list
-
-  $cmd_service start postgresql
+  $cmd_apt_get install -y postgresql-10
+  
+  $cmd_service daemon-reload
+  $cmd_service restart postgresql
 
   create_postgres_user_database
-  echo "Press [y/Y] to install heplify from source along with Golang and [n/N] to use binary,"
+  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
   printf "default use binary: "
   read HEPLIFY_MEHTHOD 
   case "$HEPLIFY_MEHTHOD" in 
-          "y"|"yes"|"Y"|"Yes"|"YES") install_golang;;
-          "n"|"no"|"N"|"No"|"NO") setup_heplify_server;;
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") install_golang;;
           *) setup_heplify_server;;
   esac
   install_homer_app
