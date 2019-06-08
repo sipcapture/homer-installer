@@ -497,7 +497,7 @@ banner_end() {
   echo "         'systemtcl start|stop heplify'"
   echo
   echo "     * Access HOMER UI:"
-  echo "         http://$my_primary_ip"
+  echo "         https://$my_primary_ip"
   echo "         [default: admin/sipcapture]"
   echo
   echo "     * Send HEP/EEP Encapsulated Packets:"
