@@ -617,7 +617,7 @@ setup_centos_7() {
   # This is the main entrypoint for setup of sipcapture/homer on a CentOS 7
   # system
 
-  local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++"
+  local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++ ntp yum-utils net-tools epel-release htop vim openssl"
   local src_base_dir="/usr/src"
 
   local cmd_yum=$(locate_cmd "yum")
@@ -626,13 +626,15 @@ setup_centos_7() {
   local cmd_curl=$(locate_cmd "curl")
   local cmd_sed=$(locate_cmd "sed")
   local cmd_iptables=$(locate_cmd "iptables")
+  local cmd_rpm=$(locate_cmd "rpm")
   
+  $cmd_yum -y update && $cmd_yum -y upgrade  
   $cmd_yum install -y $base_pkg_list
 
   $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
   $cmd_yum install -y nodejs
 
-  $cmd_yum -q -y install "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64/pgdg-centos11-11-2.noarch.rpm"
+  $cmd_rpm -Uvh "https://yum.postgresql.org/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm"
   $cmd_yum install -y postgresql10-server postgresql10
   #lets find the file to initialize the service
   updatedb
