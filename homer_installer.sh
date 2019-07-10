@@ -587,7 +587,7 @@ install_homer_app(){
   cd "$src_base_dir/$src_homer_app_dir"
   sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
   sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  $cmd_npm install && $cmd_npm install -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
+  $cmd_npm install --unsafe-perm && $cmd_npm install --unsafe-perm -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
   local cmd_knex=$(locate_cmd "knex")
   $cmd_knex migrate:latest
   $cmd_knex seed:run
