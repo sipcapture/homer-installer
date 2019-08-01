@@ -494,7 +494,7 @@ banner_end() {
   echo "         '$WEB_ROOT/api/preferences.php'"
   echo
   echo "     * Start/stop Homer SIP Capture:"
-  echo "         'systemtcl start|stop heplify'"
+  echo "         'systemctl start|stop heplify'"
   echo
   echo "     * Access HOMER UI:"
   echo "         http://$my_primary_ip"
