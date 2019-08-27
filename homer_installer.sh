@@ -489,9 +489,9 @@ banner_end() {
   echo "                                                             "
   echo "*************************************************************"
   echo
-  echo "     * Verify configuration for HOMER-API:"
-  echo "         '$WEB_ROOT/api/configuration.php'"
-  echo "         '$WEB_ROOT/api/preferences.php'"
+  echo "     * Verify configuration for HOMER-APP:"
+  echo "         '/opt/homer-app/server/config.js'"
+  echo "         '/opt/homer-app/server/private/jwt_settings.json'"
   echo
   echo "     * Start/stop Homer SIP Capture:"
   echo "         'systemctl start|stop heplify'"
