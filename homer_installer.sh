@@ -493,7 +493,10 @@ banner_end() {
   echo "         '/opt/homer-app/server/config.js'"
   echo "         '/opt/homer-app/server/private/jwt_settings.json'"
   echo
-  echo "     * Start/stop Homer SIP Capture:"
+  echo "     * Start/stop Homer SIP Capture Server:"
+  echo "         'systemctl start|stop heplify-server'"
+  echo
+  echo "     * Start/stop Homer SIP Capture Agent:"
   echo "         'systemctl start|stop heplify'"
   echo
   echo "     * Access HOMER UI:"
