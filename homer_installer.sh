@@ -239,7 +239,7 @@ repo_clone_or_update() {
   local base_dir=$1
   local dest_dir=$2
   local git_repo=$3
-  local git_branch=${4:-"origin/master"}
+  local git_branch=${4:-"master"}
   local cmd_git=$(locate_cmd "git")
 
   if [ -d "$base_dir" ]; then
@@ -248,13 +248,13 @@ repo_clone_or_update() {
       cd $dest_dir
       # $cmd_git pull
       $cmd_git fetch --all
-      $cmd_git reset --hard "$git_branch"
+      $cmd_git checkout "$git_branch"
       check_status "$?"
     else
       $cmd_git clone --depth 1 "$git_repo" "$dest_dir"
       cd $dest_dir
       $cmd_git fetch --all
-      $cmd_git reset --hard "$git_branch"
+      $cmd_git checkout "$git_branch"
       check_status "$?"
     fi
     return 0
@@ -587,7 +587,7 @@ install_homer_app(){
   local cmd_npm=$(locate_cmd "npm")
   local src_base_dir="/opt/"
   local src_homer_app_dir="homer-app"
-  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app" "origin/server-only"
+  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app" "server-only"
   echo "Clone done"
   echo "Installing Homer-App"
   cd "$src_base_dir/$src_homer_app_dir"
