@@ -253,6 +253,7 @@ repo_clone_or_update() {
     else
       $cmd_git clone --depth 1 "$git_repo" "$dest_dir"
       cd $dest_dir
+      $cmd_git fetch --all
       $cmd_git reset --hard "$git_branch"
       check_status "$?"
     fi
