@@ -1,4 +1,4 @@
-<img src="https://user-images.githubusercontent.com/1423657/55069501-8348c400-5084-11e9-9931-fefe0f9874a7.png" width=300 />
+<img src="https://user-images.githubusercontent.com/1423657/55069501-8348c400-5084-11e9-9931-fefe0f9874a7.png" width=200 />
 
 # __HOMER 7__  Installer
 This document provides guidance and details to get HOMER 7 installed stand-alone using scripts or packages
@@ -8,7 +8,7 @@ WARNING: Homer is rock-solid, while the installers and packages are experimental
 Available Methods:
 
   * [BASH Installer](https://github.com/sipcapture/homer-installer#page_with_curl-bash-installer)
-  * [DOCKER Containers](https://github.com/sipcapture/homer-docker)
+  * [DOCKER Containers](https://github.com/sipcapture/homer7-docker/tree/7.7)
 
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
