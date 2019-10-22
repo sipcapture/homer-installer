@@ -597,7 +597,6 @@ install_homer_app(){
   local cmd_knex=$(locate_cmd "knex")
   $cmd_knex migrate:latest
   $cmd_knex seed:run
-  $cmd_npm run build
   create_homer_app_service
 }
 
