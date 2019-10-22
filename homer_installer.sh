@@ -584,7 +584,7 @@ install_homer_app(){
   local cmd_npm=$(locate_cmd "npm")
   local src_base_dir="/opt/"
   local src_homer_app_dir="homer-app"
-  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app"
+  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app" "origin/server-only"
   echo "Clone done"
   echo "Installing Homer-App"
   cd "$src_base_dir/$src_homer_app_dir"
