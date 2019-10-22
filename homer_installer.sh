@@ -251,7 +251,7 @@ repo_clone_or_update() {
       $cmd_git checkout "$git_branch"
       check_status "$?"
     else
-      $cmd_git clone --depth 1 "$git_repo" "$dest_dir"
+      $cmd_git clone "$git_repo" "$dest_dir"
       cd $dest_dir
       $cmd_git fetch
       $cmd_git checkout "$git_branch"
