@@ -246,14 +246,14 @@ repo_clone_or_update() {
     cd "$base_dir"
     if [ -d "$dest_dir" ]; then
       cd $dest_dir
-      # $cmd_git pull
-      $cmd_git fetch --all
+      $cmd_git pull
+      $cmd_git fetch
       $cmd_git checkout "$git_branch"
       check_status "$?"
     else
       $cmd_git clone --depth 1 "$git_repo" "$dest_dir"
       cd $dest_dir
-      $cmd_git fetch --all
+      $cmd_git fetch
       $cmd_git checkout "$git_branch"
       check_status "$?"
     fi
