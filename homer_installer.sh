@@ -634,6 +634,13 @@ setup_centos_7() {
   $cmd_yum -y update && $cmd_yum -y upgrade  
   $cmd_yum install -y $base_pkg_list
 
+  #disable SELinux
+  echo "Disabling SELinux"
+  echo "Reboot required after installation completes"
+  setenforce 0
+  sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
+  echo "SELinux disabled"
+
   $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
   $cmd_yum install -y nodejs
 
@@ -657,9 +664,17 @@ setup_centos_7() {
 	  *) setup_heplify_server;;
   esac
   install_homer_app
-  echo "Flushing iptables"
-  $cmd_iptables -F
-  echo "Done"
+
+  echo "Configuring FirewallD"
+  #ssh should be on by default
+
+  #configure the firewall
+  firewall-cmd --permanent --zone=public --add-service={http,https}
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,9999}/udp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,9999}/tcp
+  firewall-cmd --reload
+  echo "FirewallD configured"
+
   printf "Would you like to install influxdb and grafana? [y/N]: "
   read INSTALL_INFLUXDB
   case "$INSTALL_INFLUXDB" in
