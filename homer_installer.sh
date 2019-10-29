@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # --------------------------------------------------------------------------------
-# HOMER/SipCapture automated installation script for Debian/CentOs/OpenSUSE (BETA)
+# HOMER/SipCapture automated installation script for Debian/CentOS/Ubuntu/OpenSUSE
 # --------------------------------------------------------------------------------
 # This script is only intended as a quickstart to test and get familiar with HOMER.
 # It is not suitable for high-traffic nodes, complex capture scenarios, clusters.
