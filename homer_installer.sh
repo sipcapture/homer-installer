@@ -53,11 +53,11 @@ my_pid=$$
 
 
 # HOMER Options, defaults
-DB_USER="homer"
-DB_PASS=$(dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g')
+DB_USER=${DB_USER:=homer}
+DB_PASS=${DB_PASS:=`dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g'`}
 DB_HOST="localhost"
-LISTEN_PORT="9060"
-INFLUXDB_LISTEN_PORT="9999"
+LISTEN_PORT=${LISTEN_PORT:=9060}
+INFLUXDB_LISTEN_PORT=${INFLUXDB_LISTEN_PORT:=9999}
 INSTALL_INFLUXDB=""
 
 GO_VERSION="1.12.4"
