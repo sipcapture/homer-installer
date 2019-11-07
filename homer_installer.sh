@@ -684,7 +684,7 @@ setup_centos_7() {
 }
 
 setup_debian_9() {
-  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo"
+  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo python3-dev"
   local src_base_dir="/usr/src"
   local cmd_apt_get=$(locate_cmd "apt-get")
   local cmd_wget=$(locate_cmd "wget")
