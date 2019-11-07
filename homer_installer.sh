@@ -57,7 +57,7 @@ DB_USER="homer"
 DB_PASS=$(dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g')
 DB_HOST="localhost"
 LISTEN_PORT="9060"
-INFLUXDB_LISTEN_PORT="9999"
+CHRONOGRAF_LISTEN_PORT="8888"
 INSTALL_INFLUXDB=""
 
 GO_VERSION="1.12.4"
@@ -473,9 +473,9 @@ banner_end() {
   echo "         hep://$my_primary_ip:$LISTEN_PORT"
   echo
   if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
-    echo "     * Access INFLUXDB UI:"
-    echo "         http://$my_primary_ip:$INFLUXDB_LISTEN_PORT"
-    echo "     * Configure Scapper in Influxdb with URL:"
+    echo "     * Access chronograf UI:"
+    echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
+    echo "     * Configure Scapper in chronograf with URL:"
     echo "         http://$my_primary_ip:9096"
   fi
   echo
@@ -567,6 +567,7 @@ install_homer_app(){
 }
 
 setup_influxdb(){
+
 if [ -f /etc/redhat-release ]; then
     echo "RPM Platform detected!"
 
@@ -581,13 +582,12 @@ EOF
 
     echo "Installing TICK stack ..."
     sudo yum update && sudo yum install influxdb kapacitor telegraf chronograf
+
     sudo systemctl start influxdb
-    sudo systemctl start telegraf
     sudo systemctl start kapacitor
     sudo systemctl start chronograf
 
     sudo systemctl enable influxdb
-    sudo systemctl enable telegraf
     sudo systemctl enable kapacitor
     sudo systemctl enable chronograf
 
@@ -598,25 +598,27 @@ fi
 if [ -f /etc/debian_version ]; then
 
     echo "DEBIAN Platform detected!"
+
     sudo apt-get install -y apt-transport-https
     curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
     source /etc/os-release
     test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+
     echo "Installing TICK stack ..."
-    sudo apt-get update && sudo apt-get install influxdb kapacitor telegraf chronograf
+    sudo apt-get update && sudo apt-get install influxdb kapacitor chronograf
+
     sudo systemctl start influxdb
-    sudo systemctl start telegraf
     sudo systemctl start kapacitor
     sudo systemctl start chronograf
 
     sudo systemctl enable influxdb
-    sudo systemctl enable telegraf
     sudo systemctl enable kapacitor
     sudo systemctl enable chronograf
 
     echo "done!"
 
 fi
+
 }
 
 
@@ -663,9 +665,9 @@ setup_centos_7() {
   printf "default use binary: "
   read HEPLIFY_MEHTHOD
   case "$HEPLIFY_MEHTHOD" in
-	  "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-	  "n"|"no"|"N"|"No"|"NO") install_golang;;
-	  *) setup_heplify_server;;
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") install_golang;;
+          *) setup_heplify_server;;
   esac
   install_homer_app
 
@@ -674,12 +676,12 @@ setup_centos_7() {
 
   #configure the firewall
   firewall-cmd --permanent --zone=public --add-service={http,https}
-  firewall-cmd --permanent --zone=public --add-port={9060,9096,9999}/udp
-  firewall-cmd --permanent --zone=public --add-port={9060,9096,9999}/tcp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
   firewall-cmd --reload
   echo "FirewallD configured"
 
-  printf "Would you like to install influxdb and grafana? [y/N]: "
+  printf "Would you like to install influxdb and chronograf? [y/N]: "
   read INSTALL_INFLUXDB
   case "$INSTALL_INFLUXDB" in
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
@@ -727,7 +729,7 @@ setup_debian_9() {
           *) setup_heplify_server;;
   esac
   install_homer_app
-  printf "Would you like to install influxdb and grafana? [y/N]: "
+  printf "Would you like to install influxdb and chronograf? [y/N]: "
   read INSTALL_INFLUXDB 
   case "$INSTALL_INFLUXDB" in 
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
