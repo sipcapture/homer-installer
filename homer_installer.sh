@@ -340,40 +340,6 @@ setup_heplify_server(){
   create_heplify_service
 }
 
-create_influxdb_service() {
-  local sys_systemd_base='/lib/systemd/system'
-  local usr_systemd_base='/etc/systemd/system'
-  local sys_influxdb_svc='influxdb.service'
-  local cmd_systemctl=$(locate_cmd "systemctl")
-  local cmd_cat=$(locate_cmd "cat")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-
-  if [ -d $sys_systemd_base ]; then
-    if [ ! -f $sys_systemd_base/$sys_influxdb_svc ]; then
-      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_influxdb_svc
-[Unit]
-Description=InfluxDB is an open-source, distributed, time series database
-Documentation=https://docs.influxdata.com/influxdb/
-After=network-online.target
-
-[Service]
-LimitNOFILE=65536
-ExecStart=/usr/local/bin/influxd
-KillMode=control-group
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-Alias=influxd.service
-__EOFL__
-      check_status "$?"
-    fi
-    $cmd_systemctl daemon-reload
-    $cmd_systemctl enable $sys_influxdb_svc 
-    $cmd_systemctl start $sys_influxdb_svc 
-  fi
-}
-
 create_homer_app_service() {
   local sys_systemd_base='/lib/systemd/system'
   local usr_systemd_base='/etc/systemd/system'
@@ -590,6 +556,8 @@ install_homer_app(){
   cd "$src_base_dir/$src_homer_app_dir"
   sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
   sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
+  sed -i -e "s/'influxdb'/'localhost'/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
+  sed -i -e "s/'prometheus'/'localhost'/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
   $cmd_npm install --unsafe-perm && $cmd_npm install --unsafe-perm -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
   local cmd_knex=$(locate_cmd "knex")
   $cmd_knex migrate:latest
@@ -599,20 +567,56 @@ install_homer_app(){
 }
 
 setup_influxdb(){
-  local src_base_dir="/usr/src/"
-  local cmd_wget=$(locate_cmd "wget")
-  local cmd_cd=$(locate_cmd "cd")
-  local cmd_tar=$(locate_cmd "tar")
-  local cmd_cp=$(locate_cmd "cp")
-  $cmd_cd $src_base_dir
-  $cmd_wget https://dl.influxdata.com/influxdb/releases/influxdb_2.0.0-alpha.8_linux_amd64.tar.gz
-  $cmd_tar xvzf influxdb_2.0.0-alpha.8_linux_amd64.tar.gz
-  $cmd_cp influxdb_2.0.0-alpha.8_linux_amd64/{influx,influxd} /usr/local/bin/
-  local cmd_influx=$(locate_cmd "influx")
-  create_influxdb_service
-  #lets wait for influxdb to start
-  sleep 10
-  $cmd_influx setup
+if [ -f /etc/redhat-release ]; then
+    echo "RPM Platform detected!"
+
+cat <<EOF | sudo tee /etc/yum.repos.d/influxdb.repo
+[influxdb]
+name = InfluxDB Repository - RHEL \$releasever
+baseurl = https://repos.influxdata.com/rhel/\$releasever/\$basearch/stable
+enabled = 1
+gpgcheck = 1
+gpgkey = https://repos.influxdata.com/influxdb.key
+EOF
+
+    echo "Installing TICK stack ..."
+    sudo yum update && sudo yum install influxdb kapacitor telegraf chronograf
+    sudo systemctl start influxdb
+    sudo systemctl start telegraf
+    sudo systemctl start kapacitor
+    sudo systemctl start chronograf
+
+    sudo systemctl enable influxdb
+    sudo systemctl enable telegraf
+    sudo systemctl enable kapacitor
+    sudo systemctl enable chronograf
+
+    echo "done!"
+
+fi
+
+if [ -f /etc/debian_version ]; then
+
+    echo "DEBIAN Platform detected!"
+    sudo apt-get install -y apt-transport-https
+    curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
+    source /etc/os-release
+    test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    echo "Installing TICK stack ..."
+    sudo apt-get update && sudo apt-get install influxdb kapacitor telegraf chronograf
+    sudo systemctl start influxdb
+    sudo systemctl start telegraf
+    sudo systemctl start kapacitor
+    sudo systemctl start chronograf
+
+    sudo systemctl enable influxdb
+    sudo systemctl enable telegraf
+    sudo systemctl enable kapacitor
+    sudo systemctl enable chronograf
+
+    echo "done!"
+
+fi
 }
 
 
