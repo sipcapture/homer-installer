@@ -636,60 +636,59 @@ setup_centos_7() {
   # This is the main entrypoint for setup of sipcapture/homer on a CentOS 7
   # system
 
-  #local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++ ntp yum-utils net-tools epel-release htop vim openssl"
-  #local src_base_dir="/usr/src"
+  local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++ ntp yum-utils net-tools epel-release htop vim openssl"
+  local src_base_dir="/usr/src"
 
-  #local cmd_yum=$(locate_cmd "yum")
-  #local cmd_wget=$(locate_cmd "wget")
-  #local cmd_service=$(locate_cmd "systemctl")
-  #local cmd_curl=$(locate_cmd "curl")
-  #local cmd_sed=$(locate_cmd "sed")
-  #local cmd_iptables=$(locate_cmd "iptables")
-  #local cmd_rpm=$(locate_cmd "rpm")
-  #
-  #$cmd_yum -y update && $cmd_yum -y upgrade  
-  #$cmd_yum install -y $base_pkg_list
+  local cmd_yum=$(locate_cmd "yum")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_service=$(locate_cmd "systemctl")
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_iptables=$(locate_cmd "iptables")
+  local cmd_rpm=$(locate_cmd "rpm")
+  
+  $cmd_yum -y update && $cmd_yum -y upgrade  
+  $cmd_yum install -y $base_pkg_list
 
-  ##disable SELinux
-  #echo "Disabling SELinux"
-  #echo "Reboot required after installation completes"
-  #setenforce 0
-  #sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
-  #echo "SELinux disabled"
+  #disable SELinux
+  echo "Disabling SELinux"
+  echo "Reboot required after installation completes"
+  setenforce 0
+  sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
+  echo "SELinux disabled"
 
-  #$cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
-  #$cmd_yum install -y nodejs
+  $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
+  $cmd_yum install -y nodejs
 
-  #$cmd_rpm -Uvh "https://yum.postgresql.org/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm"
-  #$cmd_yum install -y postgresql10-server postgresql10
-  ##lets find the file to initialize the service
-  #updatedb
-  #local cmd_locatepostgre="$(locate postgresql-10-setup)"
-  #$cmd_locatepostgre initdb
-  #$cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
-  #$cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
-  #$cmd_service daemon-reload
-  #$cmd_service restart postgresql-10
-  #create_postgres_user_database
-  #echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
-  #printf "default use binary: "
-  #read HEPLIFY_MEHTHOD
-  #case "$HEPLIFY_MEHTHOD" in
-  #        "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-  #        "n"|"no"|"N"|"No"|"NO") install_golang;;
-  #        *) setup_heplify_server;;
-  #esac
-  #install_homer_app
+  $cmd_rpm -Uvh "https://yum.postgresql.org/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm"
+  $cmd_yum install -y postgresql10-server postgresql10
+  #lets find the file to initialize the service
+  updatedb
+  local cmd_locatepostgre="$(locate postgresql-10-setup)"
+  $cmd_locatepostgre initdb
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
+  $cmd_service daemon-reload
+  $cmd_service restart postgresql-10
+  create_postgres_user_database
+  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
+  printf "default use binary: "
+  read HEPLIFY_MEHTHOD
+  case "$HEPLIFY_MEHTHOD" in
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") install_golang;;
+          *) setup_heplify_server;;
+  esac
+  install_homer_app
 
-  #echo "Configuring FirewallD"
-  ##ssh should be on by default
+  echo "Configuring FirewallD"
 
-  ##configure the firewall
-  #firewall-cmd --permanent --zone=public --add-service={http,https}
-  #firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
-  #firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
-  #firewall-cmd --reload
-  #echo "FirewallD configured"
+  #configure the firewall
+  firewall-cmd --permanent --zone=public --add-service={http,https}
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
+  firewall-cmd --reload
+  echo "FirewallD configured"
 
   printf "Would you like to install influxdb and chronograf? [y/N]: "
   read INSTALL_INFLUXDB
