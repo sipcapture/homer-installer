@@ -584,7 +584,8 @@ EOF
     sudo yum -y install influxdb kapacitor telegraf chronograf
 
     local cmd_cp=$(locate_cmd "cp")
-    $cmd_cp telegraf.conf /etc/telegraf/telegraf.conf
+    init_cwd=$(pwd)
+    $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
 
 
     sudo systemctl start telegraf
@@ -597,6 +598,7 @@ EOF
     sudo systemctl enable kapacitor
     sudo systemctl enable chronograf
 
+    sudo systemctl restart telegraf
     echo "done!"
 
 fi
@@ -625,6 +627,7 @@ if [ -f /etc/debian_version ]; then
     sudo systemctl enable kapacitor
     sudo systemctl enable chronograf
 
+    sudo systemctl restart telegraf
     echo "done!"
 
 fi
