@@ -583,8 +583,7 @@ EOF
     echo "Installing TICK stack ..."
     sudo yum -y install influxdb kapacitor telegraf chronograf
 
-    local cmd_cp=$(locate_cmd "cp")
-    init_cwd=$(pwd)
+    local init_cwd=`dirname $0`
     yes | $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
 
 
@@ -615,7 +614,7 @@ if [ -f /etc/debian_version ]; then
     echo "Installing TICK stack ..."
     sudo apt-get update && sudo apt-get install -y influxdb kapacitor chronograf
 
-    local cmd_cp=$(locate_cmd "cp")
+    local init_cwd=`dirname $0`
     yes | $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
 
     sudo systemctl start telegraf
