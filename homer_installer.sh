@@ -585,7 +585,7 @@ EOF
 
     local cmd_cp=$(locate_cmd "cp")
     init_cwd=$(pwd)
-    $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
+    yes | $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
 
 
     sudo systemctl start telegraf
@@ -616,7 +616,7 @@ if [ -f /etc/debian_version ]; then
     sudo apt-get update && sudo apt-get install -y influxdb kapacitor chronograf
 
     local cmd_cp=$(locate_cmd "cp")
-    $cmd_cp telegraf.conf /etc/telegraf/telegraf.conf
+    yes | $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
 
     sudo systemctl start telegraf
     sudo systemctl start influxdb
