@@ -63,6 +63,7 @@ INSTALL_INFLUXDB=""
 GO_VERSION="1.12.4"
 OS=`uname -s`
 HOME_DIR=$HOME
+CURRENT_DIR=`pwd`
 GO_HOME=$HOME_DIR/go
 GO_ROOT=/usr/local/go
 ARCH=`uname -m`
@@ -583,9 +584,7 @@ EOF
     echo "Installing TICK stack ..."
     sudo yum -y install influxdb kapacitor telegraf chronograf
 
-    local init_cwd=`dirname $0`
-    yes | $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
-
+    yes | cp $CURRENT_DIR/telegraf.conf /etc/telegraf/telegraf.conf
 
     sudo systemctl start telegraf
     sudo systemctl start influxdb
@@ -614,8 +613,7 @@ if [ -f /etc/debian_version ]; then
     echo "Installing TICK stack ..."
     sudo apt-get update && sudo apt-get install -y influxdb kapacitor chronograf
 
-    local init_cwd=`dirname $0`
-    yes | $cmd_cp $init_cwd/telegraf.conf /etc/telegraf/telegraf.conf
+    yes | cp $CURRENT_DIR/telegraf.conf /etc/telegraf/telegraf.conf
 
     sudo systemctl start telegraf
     sudo systemctl start influxdb
