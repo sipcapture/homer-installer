@@ -520,9 +520,9 @@ start_app() {
 create_postgres_user_database(){
   cwd=$(pwd)
   cd /tmp
-  sudo -u postgres psql -c "CREATE DATABASE homer_config;";
-  sudo -u postgres psql -c "CREATE DATABASE homer_data;";
-  sudo -u postgres psql -c "CREATE ROLE homer_user WITH SUPERUSER LOGIN PASSWORD homer_password;"
+  sudo -u postgres psql -c "CREATE DATABASE homer_config;"
+  sudo -u postgres psql -c "CREATE DATABASE homer_data;"
+  sudo -u postgres psql -c "CREATE ROLE homer_user WITH SUPERUSER LOGIN PASSWORD 'homer_password';"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer_user;"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer_user;"
   cd $cwd
@@ -724,9 +724,6 @@ setup_debian_9() {
   $cmd_apt_get update && $cmd_apt_get upgrade -y
 
   $cmd_apt_get install -y $base_pkg_list
-
-  $cmd_curl -sL https://deb.nodesource.com/setup_10.x | bash -
-  $cmd_apt_get install -y nodejs
 
   $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo $cmd_apt_key add -
 
