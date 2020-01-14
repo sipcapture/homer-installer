@@ -522,9 +522,9 @@ create_postgres_user_database(){
   cd /tmp
   sudo -u postgres psql -c "CREATE DATABASE homer_config;";
   sudo -u postgres psql -c "CREATE DATABASE homer_data;";
-  sudo -u postgres psql -c "CREATE ROLE homer WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer;"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer;"
+  sudo -u postgres psql -c "CREATE ROLE homer_user WITH SUPERUSER LOGIN PASSWORD homer_password;"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer_user;"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer_user;"
   cd $cwd
 }
 
@@ -548,23 +548,34 @@ install_heplify_server(){
 }
 
 install_homer_app(){
-  local cmd_npm=$(locate_cmd "npm")
-  local src_base_dir="/opt/"
-  local src_homer_app_dir="homer-app"
-  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app"
-  echo "Clone done"
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_grep=$(locate_cmd "grep")
+  local cmd_cut=$(locate_cmd "cut")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_cd=$(locate_cmd "cd")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local cmd_dpkg=$(locate_cmd "dpkg")
+  local homer_source_dir="/usr/src/"
+  if [[ ! -d "$homer_source_dir" ]]; then
+  	$cmd_mkdir -p "$homer_source_dir"
+  fi
+  $cmd_cd $heplify_source_dir
   echo "Installing Homer-App"
-  cd "$src_base_dir/$src_homer_app_dir"
-  sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  sed -i -e "s/'influxdb'/'localhost'/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  sed -i -e "s/'prometheus'/'localhost'/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  $cmd_npm install --unsafe-perm && $cmd_npm install --unsafe-perm -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
-  local cmd_knex=$(locate_cmd "knex")
-  $cmd_knex migrate:latest
-  $cmd_knex seed:run
-  $cmd_npm run build
-  create_homer_app_service
+  LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/homer-app/releases/latest | $cmd_grep \"releases/tag\""
+  DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
+  echo "$DOWNLOAD_URL"
+  RELEASE_NUMBER=${DOWNLOAD_URL##*/}
+  echo $RELEASE_NUMBER
+  COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.deb"
+  echo $COMPLETE_URL
+  $cmd_wget $COMPLETE_URL
+  $cmd_dpkg -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
+  local cmd_homerapp=$(locate_cmd "homer-app")
+  $cmd_homerapp -create-table-db-config 
+  $cmd_homerapp -populate-table-db-config
+  sudo systemctl restart homer-app
+  sudo systemctl status homer-app
 }
 
 setup_influxdb(){
@@ -723,7 +734,7 @@ setup_debian_9() {
 
   $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql-10
+  $cmd_apt_get install -y postgresql-12
   
   $cmd_service daemon-reload
   $cmd_service restart postgresql
