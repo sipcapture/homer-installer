@@ -341,72 +341,6 @@ setup_heplify_server(){
   create_heplify_service
 }
 
-create_homer_app_service() {
-  local sys_systemd_base='/lib/systemd/system'
-  local usr_systemd_base='/etc/systemd/system'
-  local sys_homerapp_svc='homer-app.service'
-  local sys_postgresql_svc=''
-
-  local cmd_systemctl=$(locate_cmd "systemctl")
-  local cmd_node=$(locate_cmd "node")
-  local cmd_cat=$(locate_cmd "cat")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-
-  if [ -d $sys_systemd_base ]; then
-    if [ -f $sys_systemd_base/postgresql.service ]; then
-      sys_postgresql_svc=postgresql.service
-    fi
-
-    if [ ! -f $sys_systemd_base/$sys_homerapp_svc ]; then
-      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_homerapp_svc
-[Unit]
-Description=Homer App Server
-ConditionPathExists=/opt/homer-app/
-
-[Service]
-WorkingDirectory=/opt/homer-app/
-ExecStart=$cmd_node bootstrap.js
-User=root
-Group=root
-# Required on some systems
-#WorkingDirectory=/opt/nodeserver
-Restart=always
-# Restart service after 10 seconds if node service crashes
-RestartSec=10
-# Output to syslog
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=homer-app
-#User=<alternate user>
-#Group=<alternate group>
-#Environment=NODE_ENV=production PORT=1337
-
-[Install]
-WantedBy=multi-user.target
-__EOFL__
-      check_status "$?"
-    fi
-    if [ ! -d $usr_systemd_base/${sys_homerapp_svc}.d ]; then
-      $cmd_mkdir -m 0755 -p $usr_systemd_base/${sys_homerapp_svc}.d
-      check_status "$?"
-    fi
-    if [ ! -f $usr_systemd_base/${sys_heplify_svc}.d/require_postgresql.conf ] && \
-       [ ! -z "$sys_postgresql_svc" ]; then
-      $cmd_cat << __EOFL__ > $usr_systemd_base/${sys_homerapp_svc}.d/require_postgresql.conf
-[Unit]
-After= $sys_postgresql_svc
-__EOFL__
-      check_status "$?"
-    fi
-    $cmd_systemctl daemon-reload
-    check_status "$?"
-    $cmd_systemctl enable $sys_homerapp_svc
-    check_status "$?"
-    $cmd_systemctl start $sys_homerapp_svc
-    check_status "$?"
-  fi
-}
-
 
 banner_start() {
   # This is the banner displayed at the start of script execution
@@ -555,27 +489,34 @@ install_homer_app(){
   local cmd_sed=$(locate_cmd "sed")
   local cmd_cd=$(locate_cmd "cd")
   local cmd_mkdir=$(locate_cmd "mkdir")
-  local cmd_dpkg=$(locate_cmd "dpkg")
   local homer_source_dir="/usr/src/"
   if [[ ! -d "$homer_source_dir" ]]; then
-  	$cmd_mkdir -p "$homer_source_dir"
+        $cmd_mkdir -p "$homer_source_dir"
   fi
+  
   $cmd_cd $heplify_source_dir
   echo "Installing Homer-App"
   LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/homer-app/releases/latest | $cmd_grep \"releases/tag\""
   DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
-  echo "$DOWNLOAD_URL"
   RELEASE_NUMBER=${DOWNLOAD_URL##*/}
-  echo $RELEASE_NUMBER
-  COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.deb"
-  echo $COMPLETE_URL
-  $cmd_wget $COMPLETE_URL
-  $cmd_dpkg -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
+  if [ -f /etc/debian_version ]; then
+  	local cmd_dpkg=$(locate_cmd "dpkg")
+  	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.deb"
+  	$cmd_wget $COMPLETE_URL
+  	$cmd_dpkg -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
+  else
+  	local cmd_rpm=$(locate_cmd "rpm")
+  	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.rpm"
+  	$cmd_wget $COMPLETE_URL
+  	$cmd_rpm -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
+  fi
+
   local cmd_homerapp=$(locate_cmd "homer-app")
   $cmd_homerapp -create-table-db-config 
   $cmd_homerapp -populate-table-db-config
   sudo systemctl restart homer-app
   sudo systemctl status homer-app
+
 }
 
 setup_influxdb(){
@@ -666,35 +607,32 @@ setup_centos_7() {
   echo "Reboot required after installation completes"
   setenforce 0
   sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
-  echo "SELinux disabled"
 
-  $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
-  $cmd_yum install -y nodejs
-
-  $cmd_rpm -Uvh "https://yum.postgresql.org/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm"
-  $cmd_yum install -y postgresql10-server postgresql10
+  $cmd_yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+  $cmd_yum install -y postgresql12-server postgresql12
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-10-setup)"
+  local cmd_locatepostgre="$(locate postgresql-12-setup)"
   $cmd_locatepostgre initdb
   $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
   $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
   $cmd_service daemon-reload
-  $cmd_service restart postgresql-10
+  $cmd_service restart postgresql-12
   create_postgres_user_database
-  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
-  printf "default use binary: "
-  read HEPLIFY_MEHTHOD
-  case "$HEPLIFY_MEHTHOD" in
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-          "n"|"no"|"N"|"No"|"NO") install_golang;;
-          *) setup_heplify_server;;
-  esac
+  #echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
+  #printf "default use binary: "
+  #read HEPLIFY_MEHTHOD
+  #case "$HEPLIFY_MEHTHOD" in
+  #        "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+  #        "n"|"no"|"N"|"No"|"NO") install_golang;;
+  #        *) setup_heplify_server;;
+  #esac
   install_homer_app
 
   echo "Configuring FirewallD"
 
   #configure the firewall
+  firewall-cmd --add-service=postgresql --permanent
   firewall-cmd --permanent --zone=public --add-service={http,https}
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
