@@ -619,14 +619,14 @@ setup_centos_7() {
   $cmd_service daemon-reload
   $cmd_service restart postgresql-12
   create_postgres_user_database
-  #echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
-  #printf "default use binary: "
-  #read HEPLIFY_MEHTHOD
-  #case "$HEPLIFY_MEHTHOD" in
-  #        "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-  #        "n"|"no"|"N"|"No"|"NO") install_golang;;
-  #        *) setup_heplify_server;;
-  #esac
+  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
+  printf "default use binary: "
+  read HEPLIFY_MEHTHOD
+  case "$HEPLIFY_MEHTHOD" in
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") install_golang;;
+          *) setup_heplify_server;;
+  esac
   install_homer_app
 
   echo "Configuring FirewallD"
