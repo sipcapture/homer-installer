@@ -614,8 +614,8 @@ setup_centos_7() {
   updatedb
   local cmd_locatepostgre="$(locate postgresql-12-setup)"
   $cmd_locatepostgre initdb
-  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
-  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
   $cmd_service daemon-reload
   $cmd_service restart postgresql-12
   create_postgres_user_database
