@@ -401,7 +401,7 @@ banner_end() {
   echo "         'systemctl start|stop heplify'"
   echo
   echo "     * Access HOMER UI:"
-  echo "         http://$my_primary_ip"
+  echo "         http://$my_primary_ip:9080"
   echo "         [default: admin/sipcapture]"
   echo
   echo "     * Send HEP/EEP Encapsulated Packets:"
@@ -633,7 +633,8 @@ setup_centos_7() {
 
   #configure the firewall
   firewall-cmd --add-service=postgresql --permanent
-  firewall-cmd --permanent --zone=public --add-service={http,https}
+  firewall-cmd --permanent --zone=public --add-port=9080/udp
+  firewall-cmd --permanent --zone=public --add-port=9080/tcp
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
   firewall-cmd --reload
