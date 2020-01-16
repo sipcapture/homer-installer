@@ -508,7 +508,7 @@ install_homer_app(){
   	local cmd_rpm=$(locate_cmd "rpm")
   	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.rpm"
   	$cmd_wget $COMPLETE_URL
-  	$cmd_rpm -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
+  	$cmd_rpm -i "homer-app-${RELEASE_NUMBER}-amd64.rpm" 
   fi
 
   local cmd_homerapp=$(locate_cmd "homer-app")
