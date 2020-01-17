@@ -53,7 +53,7 @@ my_pid=$$
 
 
 # HOMER Options, defaults
-DB_USER="homer"
+DB_USER="homer_user"
 DB_PASS=$(dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g')
 DB_HOST="localhost"
 LISTEN_PORT="9060"
@@ -456,7 +456,7 @@ create_postgres_user_database(){
   cd /tmp
   sudo -u postgres psql -c "CREATE DATABASE homer_config;"
   sudo -u postgres psql -c "CREATE DATABASE homer_data;"
-  sudo -u postgres psql -c "CREATE ROLE homer_user WITH SUPERUSER LOGIN PASSWORD 'homer_password';"
+  sudo -u postgres psql -c "CREATE ROLE ${DB_USER} WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer_user;"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer_user;"
   cd $cwd
@@ -511,9 +511,12 @@ install_homer_app(){
   	$cmd_rpm -i "homer-app-${RELEASE_NUMBER}-amd64.rpm" 
   fi
 
+  sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
+  sed -i -e "s/homer_password/$DB_PASS/g" /usr/local/homer/etc/webapp_config.json
   local cmd_homerapp=$(locate_cmd "homer-app")
   $cmd_homerapp -create-table-db-config 
   $cmd_homerapp -populate-table-db-config
+  sudo systemctl enable homer-app
   sudo systemctl restart homer-app
   sudo systemctl status homer-app
 
@@ -617,6 +620,7 @@ setup_centos_7() {
   $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
   $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
   $cmd_service daemon-reload
+  $cmd_service enable postgresql-12
   $cmd_service restart postgresql-12
   create_postgres_user_database
   echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
@@ -632,7 +636,6 @@ setup_centos_7() {
   echo "Configuring FirewallD"
 
   #configure the firewall
-  firewall-cmd --add-service=postgresql --permanent
   firewall-cmd --permanent --zone=public --add-port=9080/udp
   firewall-cmd --permanent --zone=public --add-port=9080/tcp
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
@@ -673,6 +676,7 @@ setup_debian_9() {
   $cmd_apt_get install -y postgresql-12
   
   $cmd_service daemon-reload
+  $cmd_service enable postgresql
   $cmd_service restart postgresql
 
   create_postgres_user_database
