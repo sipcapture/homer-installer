@@ -16,11 +16,9 @@ Available Methods:
 
 ## :page_with_curl: Bash Installer
 The baseline installer expects a Vanilla OS and will install and configure:
-* Homer-App 7.x
-* Node.js 10.15.3
-* PostgreSQL 10
-* Golang 1.12.4 (Optional)
-* Heplify-Server
+* HOMER-APP 7.7
+* HEPLIFY-SERVER 1.x
+* PostgreSQL 12
 * Influxdb 2.x (Optional)
 
 
