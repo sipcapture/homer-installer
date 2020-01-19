@@ -391,8 +391,10 @@ banner_end() {
   echo "*************************************************************"
   echo
   echo "     * Verify configuration for HOMER-APP:"
-  echo "         '/opt/homer-app/server/config.js'"
-  echo "         '/opt/homer-app/server/private/jwt_settings.json'"
+  echo "         '/usr/local/homer/webapp_config.json'"
+  echo
+  echo "     * Start/stop Homer Application Server:"
+  echo "         'systemctl start|stop homer-app'"
   echo
   echo "     * Start/stop Homer SIP Capture Server:"
   echo "         'systemctl start|stop heplify-server'"
@@ -404,7 +406,7 @@ banner_end() {
   echo "         http://$my_primary_ip:9080"
   echo "         [default: admin/sipcapture]"
   echo
-  echo "     * Send HEP/EEP Encapsulated Packets:"
+  echo "     * Send HEP/EEP Encapsulated Packets to:"
   echo "         hep://$my_primary_ip:$LISTEN_PORT"
   echo
   if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
