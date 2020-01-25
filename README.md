@@ -8,19 +8,15 @@ WARNING: Homer is rock-solid, while the installers and packages are experimental
 Available Methods:
 
   * [BASH Installer](https://github.com/sipcapture/homer-installer#page_with_curl-bash-installer)
-  * [DOCKER Containers](https://github.com/sipcapture/homer-docker)
-  * [PUPPET Module](https://github.com/giavac/giavac-homer)
-
+  * [DOCKER Containers](https://github.com/sipcapture/homer7-docker)
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 
 ## :page_with_curl: Bash Installer
 The baseline installer expects a Vanilla OS and will install and configure:
-* Homer-App 7.x
-* Node.js 10.15.3
-* PostgreSQL 10
-* Golang 1.12.4 (Optional)
-* Heplify-Server
+* HOMER-APP 7.7
+* HEPLIFY-SERVER 1.x
+* PostgreSQL 12
 * Influxdb 2.x (Optional)
 
 
@@ -33,7 +29,7 @@ Supported OS:
 Execute the following command and follow the interactive prompts to install:
 ```
 cd /usr/src
-wget https://cdn.rawgit.com/sipcapture/homer-installer/master/homer_installer.sh
+wget https://github.com/sipcapture/homer-installer/raw/master/homer_installer.sh
 chmod +x homer_installer.sh
 ./homer_installer.sh
 ```
@@ -54,7 +50,7 @@ Contributors and Contributions to our project are always welcome! If you intend 
 
 *Captagent is released under GNU GPLv3 license*
 
-*(C) 2008-2019 [SIPCAPTURE](http://sipcapture.org) & [QXIP BV](http://qxip.net)*
+*(C) 2008-2020 [SIPCAPTURE](http://sipcapture.org) & [QXIP BV](http://qxip.net)*
 
 ----------
 

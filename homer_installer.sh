@@ -58,11 +58,13 @@ DB_PASS=${DB_PASS:=`dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 
 DB_HOST="localhost"
 LISTEN_PORT=${LISTEN_PORT:=9060}
 INFLUXDB_LISTEN_PORT=${INFLUXDB_LISTEN_PORT:=9999}
+CHRONOGRAF_LISTEN_PORT=${CHRONOGRAF_LISTEN_PORT:=8888}
 INSTALL_INFLUXDB=""
 
 GO_VERSION="1.12.4"
 OS=`uname -s`
 HOME_DIR=$HOME
+CURRENT_DIR=`pwd`
 GO_HOME=$HOME_DIR/go
 GO_ROOT=/usr/local/go
 ARCH=`uname -m`
@@ -346,106 +348,6 @@ setup_heplify_server(){
   create_heplify_service
 }
 
-create_influxdb_service() {
-  local sys_systemd_base='/lib/systemd/system'
-  local usr_systemd_base='/etc/systemd/system'
-  local sys_influxdb_svc='influxdb.service'
-  local cmd_systemctl=$(locate_cmd "systemctl")
-  local cmd_cat=$(locate_cmd "cat")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-
-  if [ -d $sys_systemd_base ]; then
-    if [ ! -f $sys_systemd_base/$sys_influxdb_svc ]; then
-      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_influxdb_svc
-[Unit]
-Description=InfluxDB is an open-source, distributed, time series database
-Documentation=https://docs.influxdata.com/influxdb/
-After=network-online.target
-
-[Service]
-LimitNOFILE=65536
-ExecStart=/usr/local/bin/influxd
-KillMode=control-group
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-Alias=influxd.service
-__EOFL__
-      check_status "$?"
-    fi
-    $cmd_systemctl daemon-reload
-    $cmd_systemctl enable $sys_influxdb_svc 
-    $cmd_systemctl start $sys_influxdb_svc 
-  fi
-}
-
-create_homer_app_service() {
-  local sys_systemd_base='/lib/systemd/system'
-  local usr_systemd_base='/etc/systemd/system'
-  local sys_homerapp_svc='homer-app.service'
-  local sys_postgresql_svc=''
-
-  local cmd_systemctl=$(locate_cmd "systemctl")
-  local cmd_node=$(locate_cmd "node")
-  local cmd_cat=$(locate_cmd "cat")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-
-  if [ -d $sys_systemd_base ]; then
-    if [ -f $sys_systemd_base/postgresql.service ]; then
-      sys_postgresql_svc=postgresql.service
-    fi
-
-    if [ ! -f $sys_systemd_base/$sys_homerapp_svc ]; then
-      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_homerapp_svc
-[Unit]
-Description=Homer App Server
-ConditionPathExists=/opt/homer-app/
-
-[Service]
-WorkingDirectory=/opt/homer-app/
-ExecStart=$cmd_node bootstrap.js
-User=root
-Group=root
-# Required on some systems
-#WorkingDirectory=/opt/nodeserver
-Restart=always
-# Restart service after 10 seconds if node service crashes
-RestartSec=10
-# Output to syslog
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=homer-app
-#User=<alternate user>
-#Group=<alternate group>
-#Environment=NODE_ENV=production PORT=1337
-
-[Install]
-WantedBy=multi-user.target
-__EOFL__
-      check_status "$?"
-    fi
-    if [ ! -d $usr_systemd_base/${sys_homerapp_svc}.d ]; then
-      $cmd_mkdir -m 0755 -p $usr_systemd_base/${sys_homerapp_svc}.d
-      check_status "$?"
-    fi
-    if [ ! -f $usr_systemd_base/${sys_heplify_svc}.d/require_postgresql.conf ] && \
-       [ ! -z "$sys_postgresql_svc" ]; then
-      $cmd_cat << __EOFL__ > $usr_systemd_base/${sys_homerapp_svc}.d/require_postgresql.conf
-[Unit]
-After= $sys_postgresql_svc
-__EOFL__
-      check_status "$?"
-    fi
-    $cmd_systemctl daemon-reload
-    check_status "$?"
-    $cmd_systemctl enable $sys_homerapp_svc
-    check_status "$?"
-    $cmd_systemctl start $sys_homerapp_svc
-    check_status "$?"
-  fi
-}
-
 
 banner_start() {
   # This is the banner displayed at the start of script execution
@@ -496,8 +398,10 @@ banner_end() {
   echo "*************************************************************"
   echo
   echo "     * Verify configuration for HOMER-APP:"
-  echo "         '/opt/homer-app/server/config.js'"
-  echo "         '/opt/homer-app/server/private/jwt_settings.json'"
+  echo "         '/usr/local/homer/webapp_config.json'"
+  echo
+  echo "     * Start/stop Homer Application Server:"
+  echo "         'systemctl start|stop homer-app'"
   echo
   echo "     * Start/stop Homer SIP Capture Server:"
   echo "         'systemctl start|stop heplify-server'"
@@ -506,16 +410,16 @@ banner_end() {
   echo "         'systemctl start|stop heplify'"
   echo
   echo "     * Access HOMER UI:"
-  echo "         http://$my_primary_ip"
+  echo "         http://$my_primary_ip:9080"
   echo "         [default: admin/sipcapture]"
   echo
-  echo "     * Send HEP/EEP Encapsulated Packets:"
+  echo "     * Send HEP/EEP Encapsulated Packets to:"
   echo "         hep://$my_primary_ip:$LISTEN_PORT"
   echo
   if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
-    echo "     * Access INFLUXDB UI:"
-    echo "         http://$my_primary_ip:$INFLUXDB_LISTEN_PORT"
-    echo "     * Configure Scapper in Influxdb with URL:"
+    echo "     * Access chronograf UI:"
+    echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
+    echo "     * Configure Scapper in chronograf with URL:"
     echo "         http://$my_primary_ip:9096"
   fi
   echo
@@ -587,38 +491,108 @@ install_heplify_server(){
 }
 
 install_homer_app(){
-  local cmd_npm=$(locate_cmd "npm")
-  local src_base_dir="/opt/"
-  local src_homer_app_dir="homer-app"
-  repo_clone_or_update "$src_base_dir" "$src_homer_app_dir" "https://github.com/sipcapture/homer-app"
-  echo "Clone done"
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_grep=$(locate_cmd "grep")
+  local cmd_cut=$(locate_cmd "cut")
+  local cmd_sed=$(locate_cmd "sed")
+  local cmd_cd=$(locate_cmd "cd")
+  local cmd_mkdir=$(locate_cmd "mkdir")
+  local homer_source_dir="/usr/src/"
+  if [[ ! -d "$homer_source_dir" ]]; then
+        $cmd_mkdir -p "$homer_source_dir"
+  fi
+  
+  $cmd_cd $heplify_source_dir
   echo "Installing Homer-App"
-  cd "$src_base_dir/$src_homer_app_dir"
-  sed -i -e "s/homer_user/$DB_USER/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  sed -i -e "s/homer_password/$DB_PASS/g" "$src_base_dir/$src_homer_app_dir/server/config.js"
-  $cmd_npm install --unsafe-perm && $cmd_npm install --unsafe-perm -g knex eslint eslint-plugin-html eslint-plugin-json eslint-config-google
-  local cmd_knex=$(locate_cmd "knex")
-  $cmd_knex migrate:latest
-  $cmd_knex seed:run
-  $cmd_npm run build
-  create_homer_app_service
+  LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/homer-app/releases/latest | $cmd_grep \"releases/tag\""
+  DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
+  RELEASE_NUMBER=${DOWNLOAD_URL##*/}
+  if [ -f /etc/debian_version ]; then
+  	local cmd_dpkg=$(locate_cmd "dpkg")
+  	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.deb"
+  	$cmd_wget $COMPLETE_URL
+  	$cmd_dpkg -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
+  else
+  	local cmd_rpm=$(locate_cmd "rpm")
+  	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.rpm"
+  	$cmd_wget $COMPLETE_URL
+  	$cmd_rpm -i "homer-app-${RELEASE_NUMBER}-amd64.rpm" 
+  fi
+
+  sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
+  sed -i -e "s/homer_password/$DB_PASS/g" /usr/local/homer/etc/webapp_config.json
+  local cmd_homerapp=$(locate_cmd "homer-app")
+  $cmd_homerapp -create-table-db-config 
+  $cmd_homerapp -populate-table-db-config
+  sudo systemctl enable homer-app
+  sudo systemctl restart homer-app
+  sudo systemctl status homer-app
+
 }
 
 setup_influxdb(){
-  local src_base_dir="/usr/src/"
-  local cmd_wget=$(locate_cmd "wget")
-  local cmd_cd=$(locate_cmd "cd")
-  local cmd_tar=$(locate_cmd "tar")
-  local cmd_cp=$(locate_cmd "cp")
-  $cmd_cd $src_base_dir
-  $cmd_wget https://dl.influxdata.com/influxdb/releases/influxdb_2.0.0-alpha.8_linux_amd64.tar.gz
-  $cmd_tar xvzf influxdb_2.0.0-alpha.8_linux_amd64.tar.gz
-  $cmd_cp influxdb_2.0.0-alpha.8_linux_amd64/{influx,influxd} /usr/local/bin/
-  local cmd_influx=$(locate_cmd "influx")
-  create_influxdb_service
-  #lets wait for influxdb to start
-  sleep 10
-  $cmd_influx setup
+
+if [ -f /etc/redhat-release ]; then
+    echo "RPM Platform detected!"
+
+cat <<EOF | sudo tee /etc/yum.repos.d/influxdb.repo
+[influxdb]
+name = InfluxDB Repository - RHEL \$releasever
+baseurl = https://repos.influxdata.com/rhel/\$releasever/\$basearch/stable
+enabled = 1
+gpgcheck = 1
+gpgkey = https://repos.influxdata.com/influxdb.key
+EOF
+
+    echo "Installing TICK stack ..."
+    sudo yum -y install influxdb kapacitor telegraf chronograf
+
+    yes | cp $CURRENT_DIR/telegraf.conf /etc/telegraf/telegraf.conf
+
+    sudo systemctl start telegraf
+    sudo systemctl start influxdb
+    sudo systemctl start kapacitor
+    sudo systemctl start chronograf
+
+    sudo systemctl enable telegraf
+    sudo systemctl enable influxdb
+    sudo systemctl enable kapacitor
+    sudo systemctl enable chronograf
+
+    sudo systemctl restart telegraf
+    echo "done!"
+
+fi
+
+if [ -f /etc/debian_version ]; then
+
+    echo "DEBIAN Platform detected!"
+
+    sudo apt-get install -y apt-transport-https
+    curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
+    source /etc/os-release
+    test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+
+    echo "Installing TICK stack ..."
+    sudo apt-get update && sudo apt-get install -y influxdb kapacitor chronograf
+
+    yes | cp $CURRENT_DIR/telegraf.conf /etc/telegraf/telegraf.conf
+
+    sudo systemctl start telegraf
+    sudo systemctl start influxdb
+    sudo systemctl start kapacitor
+    sudo systemctl start chronograf
+
+    sudo systemctl enable influxdb
+    sudo systemctl enable kapacitor
+    sudo systemctl enable chronograf
+
+    sudo systemctl restart telegraf
+    echo "done!"
+
+fi
+
 }
 
 
@@ -645,43 +619,40 @@ setup_centos_7() {
   echo "Reboot required after installation completes"
   setenforce 0
   sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
-  echo "SELinux disabled"
 
-  $cmd_curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash -
-  $cmd_yum install -y nodejs
-
-  $cmd_rpm -Uvh "https://yum.postgresql.org/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm"
-  $cmd_yum install -y postgresql10-server postgresql10
+  $cmd_yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+  $cmd_yum install -y postgresql12-server postgresql12
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-10-setup)"
+  local cmd_locatepostgre="$(locate postgresql-12-setup)"
   $cmd_locatepostgre initdb
-  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
-  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/10/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
   $cmd_service daemon-reload
-  $cmd_service restart postgresql-10
+  $cmd_service enable postgresql-12
+  $cmd_service restart postgresql-12
   create_postgres_user_database
   echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
   printf "default use binary: "
   read HEPLIFY_MEHTHOD
   case "$HEPLIFY_MEHTHOD" in
-	  "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-	  "n"|"no"|"N"|"No"|"NO") install_golang;;
-	  *) setup_heplify_server;;
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") install_golang;;
+          *) setup_heplify_server;;
   esac
   install_homer_app
 
   echo "Configuring FirewallD"
-  #ssh should be on by default
 
   #configure the firewall
-  firewall-cmd --permanent --zone=public --add-service={http,https}
-  firewall-cmd --permanent --zone=public --add-port={9060,9096,9999}/udp
-  firewall-cmd --permanent --zone=public --add-port={9060,9096,9999}/tcp
+  firewall-cmd --permanent --zone=public --add-port=9080/udp
+  firewall-cmd --permanent --zone=public --add-port=9080/tcp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
   firewall-cmd --reload
   echo "FirewallD configured"
 
-  printf "Would you like to install influxdb and grafana? [y/N]: "
+  printf "Would you like to install influxdb and chronograf? [y/N]: "
   read INSTALL_INFLUXDB
   case "$INSTALL_INFLUXDB" in
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
@@ -690,7 +661,7 @@ setup_centos_7() {
 }
 
 setup_debian_9() {
-  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo"
+  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo python3-dev"
   local src_base_dir="/usr/src"
   local cmd_apt_get=$(locate_cmd "apt-get")
   local cmd_wget=$(locate_cmd "wget")
@@ -705,18 +676,16 @@ setup_debian_9() {
 
   $cmd_apt_get install -y $base_pkg_list
 
-  $cmd_curl -sL https://deb.nodesource.com/setup_10.x | bash -
-  $cmd_apt_get install -y nodejs
-
   $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo $cmd_apt_key add -
 
   echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
   $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql-10
+  $cmd_apt_get install -y postgresql-12
   
   $cmd_service daemon-reload
+  $cmd_service enable postgresql
   $cmd_service restart postgresql
 
   create_postgres_user_database
@@ -729,7 +698,7 @@ setup_debian_9() {
           *) setup_heplify_server;;
   esac
   install_homer_app
-  printf "Would you like to install influxdb and grafana? [y/N]: "
+  printf "Would you like to install influxdb and chronograf? [y/N]: "
   read INSTALL_INFLUXDB 
   case "$INSTALL_INFLUXDB" in 
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
