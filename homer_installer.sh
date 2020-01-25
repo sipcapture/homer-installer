@@ -390,16 +390,17 @@ banner_end() {
   echo "                                                             "
   echo "*************************************************************"
   echo
-  echo "     * Verify configuration for HOMER-APP:"
+  echo "     * Configuration Files:"
   echo "         '/usr/local/homer/webapp_config.json'"
+  echo "         '/opt/heplify-server/heplify-server.toml'"
   echo
-  echo "     * Start/stop Homer Application Server:"
+  echo "     * Start/stop HOMER Application Server:"
   echo "         'systemctl start|stop homer-app'"
   echo
-  echo "     * Start/stop Homer SIP Capture Server:"
+  echo "     * Start/stop HOMER SIP Capture Server:"
   echo "         'systemctl start|stop heplify-server'"
   echo
-  echo "     * Start/stop Homer SIP Capture Agent:"
+  echo "     * Start/stop HOMER SIP Capture Agent:"
   echo "         'systemctl start|stop heplify'"
   echo
   echo "     * Access HOMER UI:"
@@ -409,11 +410,13 @@ banner_end() {
   echo "     * Send HEP/EEP Encapsulated Packets to:"
   echo "         hep://$my_primary_ip:$LISTEN_PORT"
   echo
+  echo "     * Prometheus Metrics URL:"
+  echo "         http://$my_primary_ip:9096/metrics"
+  echo
   if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
-    echo "     * Access chronograf UI:"
+    echo "     * Access InfluxDB UI:"
     echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
-    echo "     * Configure Scapper in chronograf with URL:"
-    echo "         http://$my_primary_ip:9096"
+    echo 
   fi
   echo
   echo "**************************************************************"
