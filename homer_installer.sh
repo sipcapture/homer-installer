@@ -60,17 +60,14 @@ LISTEN_PORT="9060"
 CHRONOGRAF_LISTEN_PORT="8888"
 INSTALL_INFLUXDB=""
 
-GO_VERSION="1.12.4"
 OS=`uname -s`
 HOME_DIR=$HOME
 CURRENT_DIR=`pwd`
-GO_HOME=$HOME_DIR/go
-GO_ROOT=/usr/local/go
 ARCH=`uname -m`
 
 #### NO CHANGES BELOW THIS LINE! 
 
-VERSION=7.0
+VERSION=7.7
 SETUP_ENTRYPOINT=""
 OS=""
 DISTRO=""
@@ -91,50 +88,6 @@ is_root_user() {
   return 0
 }
 
-
-install_golang() {
-  echo
-  if [ -d /usr/local/go ]; then
-    echo "...... [ Found an older version of GO ]"
-    printf "Would you like to remove it? [y/N]: "
-    read ans
-    case "$ans" in
-    	"y"|"yes"|"Y"|"Yes"|"YES") rm -rf /usr/local/go;;
-    	*) return 0;;
-    esac
-  fi
-  # If the operating system is 64-bit Linux
-  if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
-    PACKAGE=go$GO_VERSION.linux-amd64.tar.gz
-    pushd /tmp > /dev/null
-    echo
-    wget --no-check-certificate https://storage.googleapis.com/golang/$PACKAGE
-    if [ $? -ne 0 ]; then
-    	echo "Failed to Download the package! Exiting."
-    	exit 1
-    fi
-    tar -C /usr/local -xzf $PACKAGE
-    rm -rf $PACKAGE
-    popd > /dev/null
-    setup
-  fi
-}
-
-setup() {
-  if [ ! -d $GO_HOME ]; then
-    mkdir $GO_HOME
-    mkdir -p $GO_HOME/{src,pkg,bin}
-  else
-    mkdir -p $GO_HOME/{src,pkg,bin}
-  fi
-  if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
-    grep -q -F 'export GOPATH=$HOME/go' $HOME/.bashrc || echo 'export GOPATH=$HOME/go' >> $HOME/.bashrc
-    grep -q -F 'export GOROOT=/usr/local/go' $HOME/.bashrc || echo 'export GOROOT=/usr/local/go' >> $HOME/.bashrc
-    grep -q -F 'export PATH=$PATH:$GOROOT/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
-    grep -q -F 'export PATH=$PATH:$GOPATH/bin' $HOME/.bashrc || echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
-  fi
-  install_heplify_server
-}
 have_commands() {
   # Function to check if we can find the command(s) passed to us
   # in the systems PATH
@@ -235,113 +188,6 @@ check_status() {
   fi
 }
 
-repo_clone_or_update() {
-  # Function to clone a repository or update if it already exists locally
-  local base_dir=$1
-  local dest_dir=$2
-  local git_repo=$3
-  local git_branch=${4:-"origin/master"}
-  local cmd_git=$(locate_cmd "git")
-
-  if [ -d "$base_dir" ]; then
-    cd "$base_dir"
-    if [ -d "$dest_dir" ]; then
-      cd $dest_dir
-      # $cmd_git pull
-      $cmd_git fetch --all
-      $cmd_git reset --hard "$git_branch"
-      check_status "$?"
-    else
-      $cmd_git clone --depth 1 "$git_repo" "$dest_dir"
-      check_status "$?"
-    fi
-    return 0
-  else
-    return 1
-  fi
-}
-
-create_heplify_service() {
-  local sys_systemd_base='/lib/systemd/system'
-  local usr_systemd_base='/etc/systemd/system'
-  local sys_heplify_svc='heplify-server.service'
-  local sys_postgresql_svc=''
-
-  local cmd_systemctl=$(locate_cmd "systemctl")
-  local cmd_cat=$(locate_cmd "cat")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-
-  if [ -d $sys_systemd_base ]; then
-    if [ -f $sys_systemd_base/postgresql.service ]; then
-      sys_postgresql_svc=postgresql.service
-    fi
-
-    if [ ! -f $sys_systemd_base/$sys_heplify_svc ]; then
-      $cmd_cat << __EOFL__ > $sys_systemd_base/$sys_heplify_svc
-[Unit]
-Description=HEP Server & Switch in Go
-After=network.target
-
-[Service]
-WorkingDirectory=/opt/heplify-server
-ExecStart=/opt/heplify-server/heplify-server
-ExecStop=/bin/kill \${MAINPID}
-Restart=on-failure
-RestartSec=10s
-Type=simple
-
-[Install]
-WantedBy=multi-user.target
-__EOFL__
-      check_status "$?"
-    fi
-    if [ ! -d $usr_systemd_base/${sys_heplify_svc}.d ]; then
-      $cmd_mkdir -m 0755 -p $usr_systemd_base/${sys_heplify_svc}.d
-      check_status "$?"
-    fi
-    if [ ! -f $usr_systemd_base/${sys_heplify_svc}.d/require_postgresql.conf ] && \
-       [ ! -z "$sys_postgresql_svc" ]; then
-      $cmd_cat << __EOFL__ > $usr_systemd_base/${sys_heplify_svc}.d/require_postgresql.conf
-[Unit]
-After= $sys_postgresql_svc
-__EOFL__
-      check_status "$?"
-    fi
-    $cmd_systemctl daemon-reload
-    check_status "$?"
-    $cmd_systemctl enable $sys_heplify_svc 
-    check_status "$?"
-    $cmd_systemctl start $sys_heplify_svc 
-    check_status "$?"
-  fi
-}
-
-setup_heplify_server(){
-  local cmd_curl=$(locate_cmd "curl")
-  local cmd_wget=$(locate_cmd "wget")
-  local cmd_grep=$(locate_cmd "grep")
-  local cmd_cut=$(locate_cmd "cut")
-  local cmd_sed=$(locate_cmd "sed")
-  local cmd_cd=$(locate_cmd "cd")
-  local cmd_chmod=$(locate_cmd "chmod")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-  local heplify_base_dir="/opt/heplify-server"
-  if [[ ! -d "$heplify_base_dir" ]]; then
-  	$cmd_mkdir -p "$heplify_base_dir"
-  fi
-  $cmd_cd $heplify_base_dir
-  LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/heplify-server/releases/latest | $cmd_grep \"releases/tag\""
-  DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
-  $cmd_wget "$DOWNLOAD_URL/heplify-server"
-  `$cmd_chmod +x "$heplify_base_dir/heplify-server"`
-  $cmd_wget https://raw.githubusercontent.com/sipcapture/heplify-server/master/example/homer7_config/heplify-server.toml
-  $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
-  $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
-  $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
-  create_heplify_service
-}
-
-
 banner_start() {
   # This is the banner displayed at the start of script execution
 
@@ -391,8 +237,8 @@ banner_end() {
   echo "*************************************************************"
   echo
   echo "     * Configuration Files:"
-  echo "         '/usr/local/homer/webapp_config.json'"
-  echo "         '/opt/heplify-server/heplify-server.toml'"
+  echo "         '/usr/local/homer/etc/webapp_config.json'"
+  echo "         '/etc/heplify-server.toml'"
   echo
   echo "     * Start/stop HOMER Application Server:"
   echo "         'systemctl start|stop homer-app'"
@@ -467,63 +313,39 @@ create_postgres_user_database(){
   cd $cwd
 }
 
-install_heplify_server(){
-  PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/local/go/bin  
-  local cmd_go=$(locate_cmd "go")
-  local cmd_cp=$(locate_cmd "cp")
-  local cmd_sed=$(locate_cmd "sed")
-  local cmd_cd=$(locate_cmd "cd")
-  local src_base_dir="/opt/"
-  local src_heplify_dir="heplify-server"
-  repo_clone_or_update "$src_base_dir" "$src_heplify_dir" "https://github.com/sipcapture/heplify-server"
+install_homer(){
 
-  $cmd_cd "$src_base_dir/$src_heplify_dir/"
-  $cmd_cp -f "$src_base_dir/$src_heplify_dir/example/homer7_config/heplify-server.toml" "./"
-  $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" heplify-server.toml
-  $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" heplify-server.toml
-  $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" heplify-server.toml
-  $cmd_go build "cmd/heplify-server/heplify-server.go"
-  create_heplify_service
-}
-
-install_homer_app(){
   local cmd_curl=$(locate_cmd "curl")
-  local cmd_wget=$(locate_cmd "wget")
-  local cmd_grep=$(locate_cmd "grep")
-  local cmd_cut=$(locate_cmd "cut")
   local cmd_sed=$(locate_cmd "sed")
-  local cmd_cd=$(locate_cmd "cd")
-  local cmd_mkdir=$(locate_cmd "mkdir")
-  local homer_source_dir="/usr/src/"
-  if [[ ! -d "$homer_source_dir" ]]; then
-        $cmd_mkdir -p "$homer_source_dir"
+  echo "Installing Homer-App"
+  if [ -f /etc/debian_version ]; then
+	  local cmd_apt=$(locate_cmd "apt")
+	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh | sudo bash
+	  $cmd_apt install homer-app heplify-server -y
+  else
+	  local cmd_yum=$(locate_cmd "yum")
+	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh | sudo bash
+	  $cmd_yum install homer-app heplify-server -y
   fi
   
-  $cmd_cd $heplify_source_dir
-  echo "Installing Homer-App"
-  LATEST_RELEASE="$cmd_curl -s https://github.com/sipcapture/homer-app/releases/latest | $cmd_grep \"releases/tag\""
-  DOWNLOAD_URL="$($LATEST_RELEASE | $cmd_cut -d '"' -f 2 | $cmd_sed -e 's/tag/download/g')"
-  RELEASE_NUMBER=${DOWNLOAD_URL##*/}
-  if [ -f /etc/debian_version ]; then
-  	local cmd_dpkg=$(locate_cmd "dpkg")
-  	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.deb"
-  	$cmd_wget $COMPLETE_URL
-  	$cmd_dpkg -i "homer-app-${RELEASE_NUMBER}-amd64.deb" 
-  else
-  	local cmd_rpm=$(locate_cmd "rpm")
-  	COMPLETE_URL="${DOWNLOAD_URL}/homer-app-${RELEASE_NUMBER}-amd64.rpm"
-  	$cmd_wget $COMPLETE_URL
-  	$cmd_rpm -i "homer-app-${RELEASE_NUMBER}-amd64.rpm" 
-  fi
+  $cmd_sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
+  $cmd_sed -i -e "s/homer_password/$DB_PASS/g" /usr/local/homer/etc/webapp_config.json
 
-  sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
-  sed -i -e "s/homer_password/$DB_PASS/g" /usr/local/homer/etc/webapp_config.json
   local cmd_homerapp=$(locate_cmd "homer-app")
   $cmd_homerapp -create-table-db-config 
   $cmd_homerapp -populate-table-db-config
+
+  $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" /etc/heplify-server.toml
+  $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" /etc/heplify-server.toml
+  $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" /etc/heplify-server.toml
+
   sudo systemctl enable homer-app
   sudo systemctl restart homer-app
   sudo systemctl status homer-app
+
+  sudo systemctl enable heplify-server
+  sudo systemctl restart heplify-server
+  sudo systemctl status heplify-server
 
 }
 
@@ -597,15 +419,10 @@ setup_centos_7() {
   # system
 
   local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++ ntp yum-utils net-tools epel-release htop vim openssl"
-  local src_base_dir="/usr/src"
 
   local cmd_yum=$(locate_cmd "yum")
-  local cmd_wget=$(locate_cmd "wget")
   local cmd_service=$(locate_cmd "systemctl")
-  local cmd_curl=$(locate_cmd "curl")
   local cmd_sed=$(locate_cmd "sed")
-  local cmd_iptables=$(locate_cmd "iptables")
-  local cmd_rpm=$(locate_cmd "rpm")
   
   $cmd_yum -y update && $cmd_yum -y upgrade  
   $cmd_yum install -y $base_pkg_list
@@ -628,15 +445,8 @@ setup_centos_7() {
   $cmd_service enable postgresql-12
   $cmd_service restart postgresql-12
   create_postgres_user_database
-  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
-  printf "default use binary: "
-  read HEPLIFY_MEHTHOD
-  case "$HEPLIFY_MEHTHOD" in
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-          "n"|"no"|"N"|"No"|"NO") install_golang;;
-          *) setup_heplify_server;;
-  esac
-  install_homer_app
+
+  install_homer
 
   echo "Configuring FirewallD"
 
@@ -658,14 +468,11 @@ setup_centos_7() {
 
 setup_debian_9() {
   local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo python3-dev"
-  local src_base_dir="/usr/src"
   local cmd_apt_get=$(locate_cmd "apt-get")
   local cmd_wget=$(locate_cmd "wget")
   local cmd_apt_key=$(locate_cmd "apt-key")
   local cmd_service=$(locate_cmd "systemctl")
   local cmd_curl=$(locate_cmd "curl")
-  local cmd_rm=$(locate_cmd "rm")
-  local cmd_ln=$(locate_cmd "ln")
   local cmd_wget=$(locate_cmd "wget")
 
   $cmd_apt_get update && $cmd_apt_get upgrade -y
@@ -685,15 +492,9 @@ setup_debian_9() {
   $cmd_service restart postgresql
 
   create_postgres_user_database
-  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
-  printf "default use binary: "
-  read HEPLIFY_MEHTHOD 
-  case "$HEPLIFY_MEHTHOD" in 
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
-          "n"|"no"|"N"|"No"|"NO") install_golang;;
-          *) setup_heplify_server;;
-  esac
-  install_homer_app
+
+  install_homer
+
   printf "Would you like to install influxdb and chronograf? [y/N]: "
   read INSTALL_INFLUXDB 
   case "$INSTALL_INFLUXDB" in 
