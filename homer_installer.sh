@@ -9,7 +9,7 @@
 # --------------------------------------------------------------------------------
 #
 #  Copyright notice:
-# 
+#
 #  (c) 2011-2019 QXIP BV, Amsterdam NL
 #  (c) 2011-2016 Lorenzo Mangani <lorenzo.mangani@gmail.com>
 #  (c) 2011-2016 Alexandr Dubovikov <alexandr.dubovikov@gmail.com>
@@ -17,9 +17,9 @@
 #  All rights reserved
 #
 #  This script is part of the HOMER project (http://sipcapture.org)
-#  The HOMER project is free software; you can redistribute it and/or 
-#  modify it under the terms of the GNU Affero General Public License as 
-#  published by the Free Software Foundation; either version 3 of 
+#  The HOMER project is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Affero General Public License as
+#  published by the Free Software Foundation; either version 3 of
 #  the License, or (at your option) any later version.
 #
 #  You should have received a copy of the GNU Affero General Public License
@@ -65,7 +65,7 @@ HOME_DIR=$HOME
 CURRENT_DIR=`pwd`
 ARCH=`uname -m`
 
-#### NO CHANGES BELOW THIS LINE! 
+#### NO CHANGES BELOW THIS LINE!
 
 VERSION=7.7
 SETUP_ENTRYPOINT=""
@@ -92,12 +92,12 @@ have_commands() {
   # Function to check if we can find the command(s) passed to us
   # in the systems PATH
   local cmd_list="$1"
-  local -a not_found=() 
-  
+  local -a not_found=()
+
   for cmd in $cmd_list; do
     command -v $cmd >/dev/null 2>&1 || not_found+=("$cmd")
   done
-  
+
   if [[ ${#not_found[@]} == 0 ]]; then
     # All commands found
     return 0
@@ -125,9 +125,9 @@ locate_cmd() {
 }
 
 is_supported_os() {
-  # Function to see if the OS is a supported type, the 1st 
-  # parameter passed should be the OS type to check. The bash 
-  # shell has a built in variable "OSTYPE" which should be 
+  # Function to see if the OS is a supported type, the 1st
+  # parameter passed should be the OS type to check. The bash
+  # shell has a built in variable "OSTYPE" which should be
   # sufficient for a start
 
   local os_type=$1
@@ -143,14 +143,14 @@ is_supported_os() {
                exit 1
              fi
              detect_linux_distribution # Supported OS, Check if supported distro.
-             return ;;  
+             return ;;
     *      ) return 1 ;;               # Unsupported OS
   esac
 }
 
 detect_linux_distribution() {
   # Function to see if a specific linux distribution is supported by this script
-  # If it is supported then the global variable SETUP_ENTRYPOINT is set to the 
+  # If it is supported then the global variable SETUP_ENTRYPOINT is set to the
   # function to be executed for the system setup
 
   local cmd_lsb_release=$(locate_cmd "lsb_release")
@@ -162,6 +162,8 @@ detect_linux_distribution() {
   case "$distro_name" in
     Debian ) case "$distro_version" in
                9* ) SETUP_ENTRYPOINT="setup_debian_9"
+                    return 0 ;; # Suported Distribution
+              10* ) SETUP_ENTRYPOINT="setup_debian_10"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -262,7 +264,7 @@ banner_end() {
   if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
     echo "     * Access InfluxDB UI:"
     echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
-    echo 
+    echo
   fi
   echo
   echo "**************************************************************"
@@ -319,20 +321,20 @@ install_homer(){
   local cmd_sed=$(locate_cmd "sed")
   echo "Installing Homer-App"
   if [ -f /etc/debian_version ]; then
-	  local cmd_apt_get=$(locate_cmd "apt-get")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh | sudo bash
-	  $cmd_apt_get install homer-app heplify-server -y
+          local cmd_apt_get=$(locate_cmd "apt-get")
+          $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh | sudo bash
+          $cmd_apt_get install homer-app heplify-server -y
   else
-	  local cmd_yum=$(locate_cmd "yum")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh | sudo bash
-	  $cmd_yum install homer-app heplify-server -y
+          local cmd_yum=$(locate_cmd "yum")
+          $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh | sudo bash
+          $cmd_yum install homer-app heplify-server -y
   fi
-  
+
   $cmd_sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
   $cmd_sed -i -e "s/homer_password/$DB_PASS/g" /usr/local/homer/etc/webapp_config.json
 
   local cmd_homerapp=$(locate_cmd "homer-app")
-  $cmd_homerapp -create-table-db-config 
+  $cmd_homerapp -create-table-db-config
   $cmd_homerapp -populate-table-db-config
 
   $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" /etc/heplify-server.toml
@@ -423,8 +425,8 @@ setup_centos_7() {
   local cmd_yum=$(locate_cmd "yum")
   local cmd_service=$(locate_cmd "systemctl")
   local cmd_sed=$(locate_cmd "sed")
-  
-  $cmd_yum -y update && $cmd_yum -y upgrade  
+
+  $cmd_yum -y update && $cmd_yum -y upgrade
   $cmd_yum install -y $base_pkg_list
 
   #disable SELinux
@@ -484,9 +486,9 @@ setup_debian_9() {
   echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
   $cmd_apt_get update
-  
+
   $cmd_apt_get install -y postgresql-12
-  
+
   $cmd_service daemon-reload
   $cmd_service enable postgresql
   $cmd_service restart postgresql
@@ -496,8 +498,46 @@ setup_debian_9() {
   install_homer
 
   printf "Would you like to install influxdb and chronograf? [y/N]: "
-  read INSTALL_INFLUXDB 
-  case "$INSTALL_INFLUXDB" in 
+  read INSTALL_INFLUXDB
+  case "$INSTALL_INFLUXDB" in
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+          *) echo "...... [ Exiting ]"; echo;;
+  esac
+}
+
+
+setup_debian_10() {
+  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo python3-dev"
+  local cmd_apt_get=$(locate_cmd "apt-get")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_apt_key=$(locate_cmd "apt-key")
+  local cmd_service=$(locate_cmd "systemctl")
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_wget=$(locate_cmd "wget")
+
+  $cmd_apt_get update && $cmd_apt_get upgrade -y
+
+  $cmd_apt_get install -y $base_pkg_list
+
+  $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo $cmd_apt_key add -
+
+  echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+
+  $cmd_apt_get update
+
+  $cmd_apt_get install -y postgresql-12
+
+  $cmd_service daemon-reload
+  $cmd_service enable postgresql
+  $cmd_service restart postgresql
+
+  create_postgres_user_database
+
+  install_homer
+
+  printf "Would you like to install influxdb and chronograf? [y/N]: "
+  read INSTALL_INFLUXDB
+  case "$INSTALL_INFLUXDB" in
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
           *) echo "...... [ Exiting ]"; echo;;
   esac
