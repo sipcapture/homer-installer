@@ -437,7 +437,7 @@ setup_centos_7() {
   $cmd_yum install -y postgresql12-server postgresql12
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-12-setup)"
+  local cmd_locatepostgre="$(locate postgresql-12-setup | head -1)"
   $cmd_locatepostgre initdb
   $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
   $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
