@@ -393,20 +393,20 @@ if [ -f /etc/debian_version ]; then
     test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
 
     echo "Installing TICK stack ..."
-    sudo apt-get update && sudo apt-get install -y influxdb kapacitor chronograf
+    sudo apt-get update && sudo apt-get install influxdb kapacitor chronograf telegraf -y
 
     yes | cp $CURRENT_DIR/telegraf.conf /etc/telegraf/telegraf.conf
 
-    sudo systemctl start telegraf
-    sudo systemctl start influxdb
-    sudo systemctl start kapacitor
-    sudo systemctl start chronograf
+    sudo systemctl restart telegraf
+    sudo systemctl restart influxdb
+    sudo systemctl restart kapacitor
+    sudo systemctl restart chronograf
 
     sudo systemctl enable influxdb
     sudo systemctl enable kapacitor
     sudo systemctl enable chronograf
+    sudo systemctl enable telegraf
 
-    sudo systemctl restart telegraf
     echo "done!"
 
 fi
