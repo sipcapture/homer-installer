@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               9* ) SETUP_ENTRYPOINT="setup_debian_9"
+               9* | 10* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -466,7 +466,7 @@ setup_centos_7() {
   esac
 }
 
-setup_debian_9() {
+setup_debian() {
   local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo python3-dev"
   local cmd_apt_get=$(locate_cmd "apt-get")
   local cmd_wget=$(locate_cmd "wget")
