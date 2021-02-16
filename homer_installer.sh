@@ -217,9 +217,8 @@ banner_end() {
   local cmd_ip=$(locate_cmd "ip")
   local cmd_head=$(locate_cmd "head")
   local cmd_awk=$(locate_cmd "awk")
-  local cmd_route=$(locate_cmd "route")
 
-  local my_primary_ip=$($cmd_ip $cmd_route get 8.8.8.8 | $cmd_head -1 | $cmd_awk '{ print $NF }')
+  local my_primary_ip=$($cmd_ip route get 8.8.8.8 | $cmd_head -1 | grep -Po '(\d+\.){3}\d+' | tail -n1)
 
   echo "*************************************************************"
   echo "      ,;;;;,                                                 "
