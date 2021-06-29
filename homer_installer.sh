@@ -10,7 +10,7 @@
 #
 #  Copyright notice:
 # 
-#  (c) 2011-2019 QXIP BV, Amsterdam NL
+#  (c) 2011-2020 QXIP BV, Amsterdam NL
 #  (c) 2011-2016 Lorenzo Mangani <lorenzo.mangani@gmail.com>
 #  (c) 2011-2016 Alexandr Dubovikov <alexandr.dubovikov@gmail.com>
 #
@@ -134,7 +134,7 @@ is_supported_os() {
 
   case "$os_type" in
     linux* ) OS="Linux"
-             minimal_command_list="lsb_release wget curl git"
+             minimal_command_list="lsb-release wget curl git"
              if ! have_commands "$minimal_command_list"; then
                echo "ERROR: You need the following minimal set of commands installed:"
                echo ""
