@@ -390,7 +390,7 @@ if [ -f /etc/debian_version ]; then
     sudo apt-get install -y apt-transport-https
     curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
     source /etc/os-release
-    test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian strench stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
     test $VERSION_ID = "10" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
 
     echo "Installing TICK stack ..."
