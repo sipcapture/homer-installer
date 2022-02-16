@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # --------------------------------------------------------------------------------
-# HOMER/SipCapture automated installation script for Debian/CentOs/OpenSUSE (BETA)
+# HOMER/SipCapture automated installation script for Debian/CentOS/Ubuntu/OpenSUSE
 # --------------------------------------------------------------------------------
 # This script is only intended as a quickstart to test and get familiar with HOMER.
 # It is not suitable for high-traffic nodes, complex capture scenarios, clusters.
@@ -53,11 +53,12 @@ my_pid=$$
 
 
 # HOMER Options, defaults
-DB_USER="homer_user"
-DB_PASS=$(dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g')
+DB_USER=${DB_USER:=homer}
+DB_PASS=${DB_PASS:=`dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64 | sed 's/[=\+//]//g'`}
 DB_HOST="localhost"
-LISTEN_PORT="9060"
-CHRONOGRAF_LISTEN_PORT="8888"
+LISTEN_PORT=${LISTEN_PORT:=9060}
+INFLUXDB_LISTEN_PORT=${INFLUXDB_LISTEN_PORT:=9999}
+CHRONOGRAF_LISTEN_PORT=${CHRONOGRAF_LISTEN_PORT:=8888}
 INSTALL_INFLUXDB=""
 
 OS=`uname -s`
@@ -162,6 +163,12 @@ detect_linux_distribution() {
   case "$distro_name" in
     Debian ) case "$distro_version" in
                9* | 10* ) SETUP_ENTRYPOINT="setup_debian"
+                    return 0 ;; # Suported Distribution
+               *  ) return 1 ;; # Unsupported Distribution
+             esac
+             ;;
+    Ubuntu ) case "$distro_version" in
+               18* ) SETUP_ENTRYPOINT="setup_ubuntu_18"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -305,11 +312,11 @@ start_app() {
 create_postgres_user_database(){
   cwd=$(pwd)
   cd /tmp
-  sudo -u postgres psql -c "CREATE DATABASE homer_config;"
-  sudo -u postgres psql -c "CREATE DATABASE homer_data;"
-  sudo -u postgres psql -c "CREATE ROLE ${DB_USER} WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer_user;"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer_user;"
+  sudo -u postgres psql -c "CREATE DATABASE homer_config;";
+  sudo -u postgres psql -c "CREATE DATABASE homer_data;";
+  sudo -u postgres psql -c "CREATE ROLE $DB_USER WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to $DB_USER;"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to $DB_USER;"
   cd $cwd
 }
 
@@ -500,6 +507,54 @@ setup_debian() {
   install_homer
 
   printf "Would you like to install influxdb and chronograf? [y/N]: "
+  read INSTALL_INFLUXDB 
+  case "$INSTALL_INFLUXDB" in 
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+          *) echo "...... [ Exiting ]"; echo;;
+  esac
+}
+
+setup_ubuntu_18() {
+  local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo"
+  local src_base_dir="/usr/src"
+  local cmd_apt_get=$(locate_cmd "apt-get")
+  local cmd_wget=$(locate_cmd "wget")
+  local cmd_apt_key=$(locate_cmd "apt-key")
+  local cmd_service=$(locate_cmd "systemctl")
+  local cmd_curl=$(locate_cmd "curl")
+  local cmd_rm=$(locate_cmd "rm")
+  local cmd_ln=$(locate_cmd "ln")
+  local cmd_wget=$(locate_cmd "wget")
+
+  $cmd_apt_get update && $cmd_apt_get upgrade -y
+
+  $cmd_apt_get install -y $base_pkg_list
+
+  $cmd_curl -sL https://deb.nodesource.com/setup_10.x | bash -
+  $cmd_apt_get install -y nodejs
+
+  $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo $cmd_apt_key add -
+
+  echo "deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+
+  $cmd_apt_get update
+  
+  $cmd_apt_get install -y postgresql-10
+  
+  $cmd_service daemon-reload
+  $cmd_service restart postgresql
+
+  create_postgres_user_database
+  echo "Press [y/Y] to install heplify-server binary and [n/N] to install from source(Golang would be installed)"
+  printf "default use binary: "
+  read HEPLIFY_MEHTHOD 
+  case "$HEPLIFY_MEHTHOD" in 
+          "y"|"yes"|"Y"|"Yes"|"YES") setup_heplify_server;;
+          "n"|"no"|"N"|"No"|"NO") install_golang;;
+          *) setup_heplify_server;;
+  esac
+  install_homer_app
+  printf "Would you like to install influxdb and grafana? [y/N]: "
   read INSTALL_INFLUXDB 
   case "$INSTALL_INFLUXDB" in 
           "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;

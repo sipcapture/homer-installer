@@ -23,6 +23,7 @@ The baseline installer expects a Vanilla OS and will install and configure:
 Supported OS:
 * Debian 9
 * CentOS 7
+* Ubuntu 18.04 (beta)
 
 ### Run & Install:
 Execute the following command and follow the interactive prompts to install:
