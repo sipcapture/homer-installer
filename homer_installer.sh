@@ -308,8 +308,8 @@ create_postgres_user_database(){
   sudo -u postgres psql -c "CREATE DATABASE homer_config;"
   sudo -u postgres psql -c "CREATE DATABASE homer_data;"
   sudo -u postgres psql -c "CREATE ROLE ${DB_USER} WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer_user;"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer_user;"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to ${DB_USER};"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to ${DB_USER};"
   cd $cwd
 }
 
