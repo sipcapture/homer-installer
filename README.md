@@ -17,7 +17,6 @@ The baseline installer expects a Vanilla OS and will install and configure:
 * HOMER-APP 7.7
 * HEPLIFY-SERVER 1.x
 * PostgreSQL 12
-* Influxdb 2.x (Optional)
 
 
 Supported OS:
