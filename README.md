@@ -21,8 +21,8 @@ The baseline installer expects a Vanilla OS and will install and configure:
 
 
 Supported OS:
-* Debian 9
-* CentOS 7
+* Debian 10, 11
+* CentOS 8, 9
 
 ### Run & Install:
 Execute the following command and follow the interactive prompts to install:
