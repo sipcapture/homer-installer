@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               9* | 10* ) SETUP_ENTRYPOINT="setup_debian"
+               9* | 10* | 11* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -392,6 +392,7 @@ if [ -f /etc/debian_version ]; then
     source /etc/os-release
     test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
     test $VERSION_ID = "10" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
 
     echo "Installing TICK stack ..."
     sudo apt-get update && sudo apt-get install influxdb kapacitor chronograf telegraf -y
@@ -436,16 +437,16 @@ setup_centos_7() {
   sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
 
   $cmd_yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-  $cmd_yum install -y postgresql12-server postgresql12
+  $cmd_yum install -y postgresql13-server postgresql13
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-12-setup | head -1)"
+  local cmd_locatepostgre="$(locate postgresql-13-setup | head -1)"
   $cmd_locatepostgre initdb
-  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
-  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/12/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
   $cmd_service daemon-reload
-  $cmd_service enable postgresql-12
-  $cmd_service restart postgresql-12
+  $cmd_service enable postgresql-13
+  $cmd_service restart postgresql-13
   create_postgres_user_database
 
   install_homer
@@ -489,7 +490,7 @@ setup_debian() {
 
   $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql-12
+  $cmd_apt_get install -y postgresql-13
   
   $cmd_service daemon-reload
   $cmd_service enable postgresql

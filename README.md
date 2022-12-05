@@ -16,7 +16,7 @@ Available Methods:
 The baseline installer expects a Vanilla OS and will install and configure:
 * HOMER-APP 7.7
 * HEPLIFY-SERVER 1.x
-* PostgreSQL 12
+* PostgreSQL 13
 
 
 Supported OS:
@@ -24,7 +24,25 @@ Supported OS:
 * CentOS 8, 9
 
 ### Run & Install:
-Execute the following command and follow the interactive prompts to install:
+Make sure the script is executed as root on a netinstall vanilla server. Execute the following command and follow the interactive prompts to install:
+
+For Debian
+```
+apt-get install libluajit-5.1-common libluajit-5.1-dev lsb-release wget curl git
+```
+
+For CentOS
+```
+yum install redhat-lsb-core wget curl git
+```
+
+If you would like to install influxdb and chronograf:
+```
+cd /usr/src
+wget https://raw.githubusercontent.com/sipcapture/homer-installer/master/telegraf.conf
+```
+
+Fianlly, download and run the Homer Installer script:
 ```
 cd /usr/src
 wget https://github.com/sipcapture/homer-installer/raw/master/homer_installer.sh
