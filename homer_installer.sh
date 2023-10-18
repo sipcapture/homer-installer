@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               9* | 10* | 11* ) SETUP_ENTRYPOINT="setup_debian"
+               9* | 10* | 11* | 12* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -320,12 +320,12 @@ install_homer(){
   echo "Installing Homer-App"
   if [ -f /etc/debian_version ]; then
 	  local cmd_apt_get=$(locate_cmd "apt-get")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh | sudo bash
-	  $cmd_apt_get install homer-app heplify-server -y
+	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh?any=true | sudo bash
+	  $cmd_apt_get install heplify homer-app heplify-server -y
   else
 	  local cmd_yum=$(locate_cmd "yum")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh | sudo bash
-	  $cmd_yum install homer-app heplify-server -y
+	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh?any=true | sudo bash
+	  $cmd_yum install heplify homer-app heplify-server -y
   fi
   
   $cmd_sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
@@ -487,6 +487,7 @@ setup_debian() {
   source /etc/os-release
   test $VERSION_ID = "9" && echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
   test $VERSION_ID = "10" && echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+  test $VERSION_ID = "12" && echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
   $cmd_apt_get update
   
