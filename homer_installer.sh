@@ -320,11 +320,11 @@ install_homer(){
   echo "Installing Homer-App"
   if [ -f /etc/debian_version ]; then
 	  local cmd_apt_get=$(locate_cmd "apt-get")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh | sudo bash
+	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh?any=true | sudo bash
 	  $cmd_apt_get install homer-app heplify-server -y
   else
 	  local cmd_yum=$(locate_cmd "yum")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh | sudo bash
+	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh?any=true | sudo bash
 	  $cmd_yum install homer-app heplify-server -y
   fi
   
