@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               9* | 10* | 11* ) SETUP_ENTRYPOINT="setup_debian"
+               9* | 10* | 11* | 12* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -392,7 +392,9 @@ if [ -f /etc/debian_version ]; then
     source /etc/os-release
     test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
     test $VERSION_ID = "10" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
-    test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian bullseye stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    test $VERSION_ID = "12" && echo "deb https://repos.influxdata.com/debian bookworm stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+
 
     echo "Installing TICK stack ..."
     sudo apt-get update && sudo apt-get install influxdb kapacitor chronograf telegraf -y
@@ -490,7 +492,7 @@ setup_debian() {
 
   $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql-13
+  $cmd_apt_get install -y postgresql
   
   $cmd_service daemon-reload
   $cmd_service enable postgresql
