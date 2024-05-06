@@ -442,16 +442,16 @@ setup_centos_7() {
   sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
 
   $cmd_yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-  $cmd_yum install -y postgresql-server postgresql
+  $cmd_yum install -y postgresql15-server
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-13-setup | head -1)"
+  local cmd_locatepostgre="$(locate postgresql-15-setup | head -1)"
   $cmd_locatepostgre initdb
-  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
-  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
   $cmd_service daemon-reload
-  $cmd_service enable postgresql
-  $cmd_service restart postgresql
+  $cmd_service enable postgresql-15
+  $cmd_service restart postgresql-15
   create_postgres_user_database
 
   install_homer
