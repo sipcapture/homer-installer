@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               9* | 10* | 11* ) SETUP_ENTRYPOINT="setup_debian"
+                10* | 11* | 12* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -259,11 +259,12 @@ banner_end() {
   echo "     * Prometheus Metrics URL:"
   echo "         http://$my_primary_ip:9096/metrics"
   echo
-  if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
-    echo "     * Access InfluxDB UI:"
-    echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
-    echo 
-  fi
+  # Commenting out Influx and Chronograf
+  # if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
+  #  echo "     * Access InfluxDB UI:"
+  #  echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
+  #  echo 
+  # fi
   echo
   echo "**************************************************************"
   echo
@@ -338,6 +339,8 @@ install_homer(){
   $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" /etc/heplify-server.toml
   $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" /etc/heplify-server.toml
   $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" /etc/heplify-server.toml
+  $cmd_sed -i -e "s/HEPTLSAddr            = \"0.0.0.0:9060\"/HEPTLSAddr            = \"0.0.0.0:9061\"/g" /etc/heplify-server.toml
+  $cmd_sed -i -e "s/HEPTCPAddr            = \"\"/HEPTCPAddr            = \"0.0.0.0:9060\"/g" /etc/heplify-server.toml
 
   sudo systemctl enable homer-app
   sudo systemctl restart homer-app
@@ -392,7 +395,9 @@ if [ -f /etc/debian_version ]; then
     source /etc/os-release
     test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
     test $VERSION_ID = "10" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
-    test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian bullseye stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    test $VERSION_ID = "12" && echo "deb https://repos.influxdata.com/debian bookworm stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+
 
     echo "Installing TICK stack ..."
     sudo apt-get update && sudo apt-get install influxdb kapacitor chronograf telegraf -y
@@ -437,16 +442,16 @@ setup_centos_7() {
   sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
 
   $cmd_yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-  $cmd_yum install -y postgresql13-server postgresql13
+  $cmd_yum install -y postgresql15-server
   #lets find the file to initialize the service
   updatedb
-  local cmd_locatepostgre="$(locate postgresql-13-setup | head -1)"
+  local cmd_locatepostgre="$(locate postgresql-15-setup | head -1)"
   $cmd_locatepostgre initdb
-  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
-  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
   $cmd_service daemon-reload
-  $cmd_service enable postgresql-13
-  $cmd_service restart postgresql-13
+  $cmd_service enable postgresql-15
+  $cmd_service restart postgresql-15
   create_postgres_user_database
 
   install_homer
@@ -457,16 +462,17 @@ setup_centos_7() {
   firewall-cmd --permanent --zone=public --add-port=9080/udp
   firewall-cmd --permanent --zone=public --add-port=9080/tcp
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
-  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888,9061}/tcp
   firewall-cmd --reload
   echo "FirewallD configured"
-
-  printf "Would you like to install influxdb and chronograf? [y/N]: "
-  read INSTALL_INFLUXDB
-  case "$INSTALL_INFLUXDB" in
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
-          *) echo "...... [ Exiting ]"; echo;;
-  esac
+  
+# Commenting out Influx and Chronograf
+  # printf "Would you like to install influxdb and chronograf? [y/N]: "
+  # read INSTALL_INFLUXDB
+  # case "$INSTALL_INFLUXDB" in
+  #        "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+  #        *) echo "...... [ Exiting ]"; echo;;
+  # esac
 }
 
 setup_debian() {
@@ -487,10 +493,12 @@ setup_debian() {
   source /etc/os-release
   test $VERSION_ID = "9" && echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
   test $VERSION_ID = "10" && echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+  test $VERSION_ID = "11" && echo "deb [signed-by=/etc/apt/trusted.gpg] http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+  test $VERSION_ID = "12" && echo "deb [signed-by=/etc/apt/trusted.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
   $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql-13
+  $cmd_apt_get install -y postgresql postgresql-contrib
   
   $cmd_service daemon-reload
   $cmd_service enable postgresql
@@ -500,12 +508,13 @@ setup_debian() {
 
   install_homer
 
-  printf "Would you like to install influxdb and chronograf? [y/N]: "
-  read INSTALL_INFLUXDB 
-  case "$INSTALL_INFLUXDB" in 
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
-          *) echo "...... [ Exiting ]"; echo;;
-  esac
+# Commenting out Influx and Chronograf
+  # printf "Would you like to install influxdb and chronograf? [y/N]: "
+  # read INSTALL_INFLUXDB 
+  # case "$INSTALL_INFLUXDB" in 
+  #       "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+  #        *) echo "...... [ Exiting ]"; echo;;
+  # esac
 }
 
 ######################################################################
