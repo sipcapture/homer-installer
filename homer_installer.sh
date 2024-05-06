@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-               9* | 10* | 11* | 12* ) SETUP_ENTRYPOINT="setup_debian"
+                10* | 11* | 12* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
