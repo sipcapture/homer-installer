@@ -259,11 +259,12 @@ banner_end() {
   echo "     * Prometheus Metrics URL:"
   echo "         http://$my_primary_ip:9096/metrics"
   echo
-  if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
-    echo "     * Access InfluxDB UI:"
-    echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
-    echo 
-  fi
+  # Commenting out Influx and Chronograf
+  # if [[ "$INSTALL_INFLUXDB" =~ y|yes|Y|Yes|YES ]] ; then
+  #  echo "     * Access InfluxDB UI:"
+  #  echo "         http://$my_primary_ip:$CHRONOGRAF_LISTEN_PORT"
+  #  echo 
+  # fi
   echo
   echo "**************************************************************"
   echo
@@ -441,7 +442,7 @@ setup_centos_7() {
   sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
 
   $cmd_yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-  $cmd_yum install -y postgresql13-server postgresql13
+  $cmd_yum install -y postgresql-server postgresql
   #lets find the file to initialize the service
   updatedb
   local cmd_locatepostgre="$(locate postgresql-13-setup | head -1)"
@@ -449,8 +450,8 @@ setup_centos_7() {
   $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
   $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/13/data/pg_hba.conf
   $cmd_service daemon-reload
-  $cmd_service enable postgresql-13
-  $cmd_service restart postgresql-13
+  $cmd_service enable postgresql
+  $cmd_service restart postgresql
   create_postgres_user_database
 
   install_homer
@@ -461,16 +462,17 @@ setup_centos_7() {
   firewall-cmd --permanent --zone=public --add-port=9080/udp
   firewall-cmd --permanent --zone=public --add-port=9080/tcp
   firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
-  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/tcp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888,9061}/tcp
   firewall-cmd --reload
   echo "FirewallD configured"
-
-  printf "Would you like to install influxdb and chronograf? [y/N]: "
-  read INSTALL_INFLUXDB
-  case "$INSTALL_INFLUXDB" in
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
-          *) echo "...... [ Exiting ]"; echo;;
-  esac
+  
+# Commenting out Influx and Chronograf
+  # printf "Would you like to install influxdb and chronograf? [y/N]: "
+  # read INSTALL_INFLUXDB
+  # case "$INSTALL_INFLUXDB" in
+  #        "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+  #        *) echo "...... [ Exiting ]"; echo;;
+  # esac
 }
 
 setup_debian() {
@@ -504,12 +506,13 @@ setup_debian() {
 
   install_homer
 
-  printf "Would you like to install influxdb and chronograf? [y/N]: "
-  read INSTALL_INFLUXDB 
-  case "$INSTALL_INFLUXDB" in 
-          "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
-          *) echo "...... [ Exiting ]"; echo;;
-  esac
+# Commenting out Influx and Chronograf
+  # printf "Would you like to install influxdb and chronograf? [y/N]: "
+  # read INSTALL_INFLUXDB 
+  # case "$INSTALL_INFLUXDB" in 
+  #       "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
+  #        *) echo "...... [ Exiting ]"; echo;;
+  # esac
 }
 
 ######################################################################
