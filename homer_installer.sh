@@ -338,6 +338,8 @@ install_homer(){
   $cmd_sed -i -e "s/DBUser\s*=\s*\"postgres\"/DBUser          = \"$DB_USER\"/g" /etc/heplify-server.toml
   $cmd_sed -i -e "s/DBPass\s*=\s*\"\"/DBPass          = \"$DB_PASS\"/g" /etc/heplify-server.toml
   $cmd_sed -i -e "s/PromAddr\s*=\s*\"\"/PromAddr        = \"0.0.0.0:9096\"/g" /etc/heplify-server.toml
+  $cmd_sed -i -e "s/HEPTLSAddr            = \"0.0.0.0:9060\"/HEPTLSAddr            = \"0.0.0.0:9061\"/g" /etc/heplify-server.toml
+  $cmd_sed -i -e "s/HEPTCPAddr            = \"\"/HEPTCPAddr            = \"0.0.0.0:9060\"/g" /etc/heplify-server.toml
 
   sudo systemctl enable homer-app
   sudo systemctl restart homer-app
