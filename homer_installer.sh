@@ -493,10 +493,12 @@ setup_debian() {
   source /etc/os-release
   test $VERSION_ID = "9" && echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
   test $VERSION_ID = "10" && echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+  test $VERSION_ID = "11" && echo "deb http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+  test $VERSION_ID = "12" && echo "deb http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list
 
   $cmd_apt_get update
   
-  $cmd_apt_get install -y postgresql
+  $cmd_apt_get install -y postgresql postgresql-contrib
   
   $cmd_service daemon-reload
   $cmd_service enable postgresql
