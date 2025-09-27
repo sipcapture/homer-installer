@@ -161,7 +161,7 @@ detect_linux_distribution() {
 
   case "$distro_name" in
     Debian ) case "$distro_version" in
-                10* | 11* | 12* ) SETUP_ENTRYPOINT="setup_debian"
+                10* | 11* | 12* | 13* ) SETUP_ENTRYPOINT="setup_debian"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -320,13 +320,13 @@ install_homer(){
   local cmd_sed=$(locate_cmd "sed")
   echo "Installing Homer-App"
   if [ -f /etc/debian_version ]; then
-	  local cmd_apt_get=$(locate_cmd "apt-get")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh?any=true | sudo bash
-	  $cmd_apt_get install homer-app heplify-server -y
+          local cmd_apt_get=$(locate_cmd "apt-get")
+          $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh?any=true | sudo bash
+          $cmd_apt_get install homer-app heplify-server -y
   else
-	  local cmd_yum=$(locate_cmd "yum")
-	  $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh?any=true | sudo bash
-	  $cmd_yum install homer-app heplify-server -y
+          local cmd_yum=$(locate_cmd "yum")
+          $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh?any=true | sudo bash
+          $cmd_yum install homer-app heplify-server -y
   fi
   
   $cmd_sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
@@ -391,13 +391,20 @@ if [ -f /etc/debian_version ]; then
     echo "DEBIAN Platform detected!"
 
     sudo apt-get install -y apt-transport-https
-    curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
     source /etc/os-release
-    test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
-    test $VERSION_ID = "10" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
-    test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian bullseye stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
-    test $VERSION_ID = "12" && echo "deb https://repos.influxdata.com/debian bookworm stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
 
+    if [ "$VERSION_ID" = "13" ]; then
+        # Proper key management for Debian 13 ("trixie")
+        wget -qO /usr/share/keyrings/influxdb.gpg https://repos.influxdata.com/influxdata-archive_compat.key
+        echo "deb [signed-by=/usr/share/keyrings/influxdb.gpg] https://repos.influxdata.com/debian trixie stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    else
+        # Legacy method for earlier versions
+        curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
+        test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+        test $VERSION_ID = "10" && echo "deb https://repos.influxdata.com/debian buster stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+        test $VERSION_ID = "11" && echo "deb https://repos.influxdata.com/debian bullseye stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+        test $VERSION_ID = "12" && echo "deb https://repos.influxdata.com/debian bookworm stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+    fi
 
     echo "Installing TICK stack ..."
     sudo apt-get update && sudo apt-get install influxdb kapacitor chronograf telegraf -y
@@ -479,22 +486,27 @@ setup_debian() {
   local base_pkg_list="software-properties-common make cmake gcc g++ dirmngr sudo python3-dev net-tools"
   local cmd_apt_get=$(locate_cmd "apt-get")
   local cmd_wget=$(locate_cmd "wget")
-  local cmd_apt_key=$(locate_cmd "apt-key")
   local cmd_service=$(locate_cmd "systemctl")
   local cmd_curl=$(locate_cmd "curl")
-  local cmd_wget=$(locate_cmd "wget")
 
   $cmd_apt_get update && $cmd_apt_get upgrade -y
 
   $cmd_apt_get install -y $base_pkg_list
 
-  $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo $cmd_apt_key add -
-
   source /etc/os-release
-  test $VERSION_ID = "9" && echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc/apt/sources.list.d/postgresql.list
-  test $VERSION_ID = "10" && echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" > /etc/apt/sources.list.d/postgresql.list
-  test $VERSION_ID = "11" && echo "deb [signed-by=/etc/apt/trusted.gpg] http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main" > /etc/apt/sources.list.d/postgresql.list
-  test $VERSION_ID = "12" && echo "deb [signed-by=/etc/apt/trusted.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list
+
+  if [ "$VERSION_ID" = "13" ]; then
+    # Modern key installation for Debian 13
+    $cmd_wget -qO /usr/share/keyrings/postgresql.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    echo "deb [signed-by=/usr/share/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt/ trixie-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+  else
+    # Legacy key installation for Debian <=12
+    $cmd_wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | sudo apt-key add -
+    test $VERSION_ID = "9" && echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+    test $VERSION_ID = "10" && echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+    test $VERSION_ID = "11" && echo "deb [signed-by=/etc/apt/trusted.gpg] http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+    test $VERSION_ID = "12" && echo "deb [signed-by=/etc/apt/trusted.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+  fi
 
   $cmd_apt_get update
   
