@@ -20,8 +20,9 @@ The baseline installer expects a Vanilla OS and will install and configure:
 
 
 Supported OS:
-* Debian 10, 11
-* CentOS 8, 9
+* Debian 10, 11, 12, 13
+* AlmaLinux 8, 9
+* CentOS 7, 8, 9
 
 ### Run & Install:
 Make sure the script is executed as root on a netinstall vanilla server. Execute the following command and follow the interactive prompts to install:
@@ -51,8 +52,8 @@ chmod +x homer_installer.sh
 ```
 
 ### Notes:
-CentOS
-* Ensure that the 'redhat-lsb-core' package is installed prior to running the installer.
+CentOS / AlmaLinux
+* Ensure that the 'redhat-lsb-core' package is installed prior to running the installer (`dnf install -y redhat-lsb-core` on AlmaLinux 8/9).
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 

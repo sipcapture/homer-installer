@@ -169,6 +169,14 @@ detect_linux_distribution() {
     CentOS ) case "$distro_version" in
                7* ) SETUP_ENTRYPOINT="setup_centos_7"
                     return 0 ;; # Suported Distribution
+               8* | 9* ) SETUP_ENTRYPOINT="setup_el_8_9"
+                    return 0 ;; # Suported Distribution
+               *  ) return 1 ;; # Unsupported Distribution
+             esac
+             ;;
+    AlmaLinux ) case "$distro_version" in
+               8* | 9* ) SETUP_ENTRYPOINT="setup_el_8_9"
+                    return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
              ;;
@@ -480,6 +488,53 @@ setup_centos_7() {
   #        "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
   #        *) echo "...... [ Exiting ]"; echo;;
   # esac
+}
+
+setup_el_8_9() {
+  # RHEL-compatible 8.x / 9.x (AlmaLinux, CentOS Stream, etc.)
+  local el_major="${DISTRO_VERSION%%.*}"
+  local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++ chrony yum-utils net-tools epel-release htop vim openssl redhat-lsb-core"
+  local cmd_dnf
+  local cmd_service=$(locate_cmd "systemctl")
+  local cmd_sed=$(locate_cmd "sed")
+
+  if have_commands "dnf"; then
+    cmd_dnf=$(locate_cmd "dnf")
+  else
+    cmd_dnf=$(locate_cmd "yum")
+  fi
+
+  $cmd_dnf -y update && $cmd_dnf -y upgrade
+  $cmd_dnf install -y $base_pkg_list
+
+  echo "Disabling SELinux"
+  echo "Reboot required after installation completes"
+  if command -v setenforce >/dev/null 2>&1; then
+    setenforce 0 || true
+  fi
+  sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
+
+  $cmd_dnf -y install "https://download.postgresql.org/pub/repos/yum/reporpms/EL-${el_major}-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+  $cmd_dnf install -y postgresql15-server
+  updatedb
+  local cmd_locatepostgre="$(locate postgresql-15-setup | head -1)"
+  $cmd_locatepostgre initdb
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
+  $cmd_service daemon-reload
+  $cmd_service enable postgresql-15
+  $cmd_service restart postgresql-15
+  create_postgres_user_database
+
+  install_homer
+
+  echo "Configuring FirewallD"
+  firewall-cmd --permanent --zone=public --add-port=9080/udp
+  firewall-cmd --permanent --zone=public --add-port=9080/tcp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888,9061}/tcp
+  firewall-cmd --reload
+  echo "FirewallD configured"
 }
 
 setup_debian() {
