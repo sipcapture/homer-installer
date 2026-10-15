@@ -20,8 +20,9 @@ The baseline installer expects a Vanilla OS and will install and configure:
 
 
 Supported OS:
-* Debian 10, 11
-* CentOS 8, 9
+* Debian 10, 11, 12, 13
+* AlmaLinux / Rocky Linux 8, 9
+* CentOS 7, 8, 9
 
 ### Run & Install:
 Make sure the script is executed as root on a netinstall vanilla server. Execute the following command and follow the interactive prompts to install:
@@ -31,10 +32,11 @@ For Debian
 apt-get install libluajit-5.1-common libluajit-5.1-dev lsb-release wget curl git
 ```
 
-For CentOS
+For AlmaLinux / Rocky / CentOS
 ```
-yum install redhat-lsb-core wget curl git
+dnf install -y wget curl git epel-release
 ```
+(`lsb_release` is optional; the installer falls back to `/etc/os-release`.)
 
 If you would like to install influxdb and chronograf:
 ```
@@ -51,8 +53,8 @@ chmod +x homer_installer.sh
 ```
 
 ### Notes:
-CentOS
-* Ensure that the 'redhat-lsb-core' package is installed prior to running the installer.
+AlmaLinux / Rocky / CentOS
+* Install `wget`, `curl`, and `git` before running the installer. EPEL (`epel-release`) is installed automatically on EL 8/9 if missing.
 
 ![splitter](http://i.imgur.com/lytn4zn.png)
 

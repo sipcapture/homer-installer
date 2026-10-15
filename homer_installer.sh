@@ -134,12 +134,16 @@ is_supported_os() {
 
   case "$os_type" in
     linux* ) OS="Linux"
-             minimal_command_list="lsb_release wget curl git"
+             minimal_command_list="wget curl git"
              if ! have_commands "$minimal_command_list"; then
                echo "ERROR: You need the following minimal set of commands installed:"
                echo ""
                echo "       $minimal_command_list"
                echo ""
+               exit 1
+             fi
+             if ! have_commands "lsb_release" && [[ ! -f /etc/os-release ]]; then
+               echo "ERROR: Install lsb_release or ensure /etc/os-release is present."
                exit 1
              fi
              detect_linux_distribution # Supported OS, Check if supported distro.
@@ -153,9 +157,32 @@ detect_linux_distribution() {
   # If it is supported then the global variable SETUP_ENTRYPOINT is set to the 
   # function to be executed for the system setup
 
-  local cmd_lsb_release=$(locate_cmd "lsb_release")
-  local distro_name=$($cmd_lsb_release -si)
-  local distro_version=$($cmd_lsb_release -sr)
+  local distro_name=""
+  local distro_version=""
+
+  if have_commands "lsb_release"; then
+    local cmd_lsb_release=$(locate_cmd "lsb_release")
+    distro_name=$($cmd_lsb_release -si)
+    distro_version=$($cmd_lsb_release -sr)
+  fi
+
+  if [[ -z "$distro_name" && -f /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    source /etc/os-release
+    case "${ID,,}" in
+      almalinux) distro_name="AlmaLinux" ;;
+      rocky) distro_name="Rocky" ;;
+      centos) distro_name="CentOS" ;;
+      debian) distro_name="Debian" ;;
+      *) distro_name="${NAME%% *}" ;;
+    esac
+    distro_version="${VERSION_ID}"
+  fi
+
+  if [[ -z "$distro_name" ]]; then
+    return 1
+  fi
+
   DISTRO="$distro_name"
   DISTRO_VERSION="$distro_version"
 
@@ -168,6 +195,14 @@ detect_linux_distribution() {
              ;;
     CentOS ) case "$distro_version" in
                7* ) SETUP_ENTRYPOINT="setup_centos_7"
+                    return 0 ;; # Suported Distribution
+               8* | 9* ) SETUP_ENTRYPOINT="setup_el_8_9"
+                    return 0 ;; # Suported Distribution
+               *  ) return 1 ;; # Unsupported Distribution
+             esac
+             ;;
+    AlmaLinux | Rocky | RockyLinux ) case "$distro_version" in
+               8* | 9* ) SETUP_ENTRYPOINT="setup_el_8_9"
                     return 0 ;; # Suported Distribution
                *  ) return 1 ;; # Unsupported Distribution
              esac
@@ -309,8 +344,8 @@ create_postgres_user_database(){
   sudo -u postgres psql -c "CREATE DATABASE homer_config;"
   sudo -u postgres psql -c "CREATE DATABASE homer_data;"
   sudo -u postgres psql -c "CREATE ROLE ${DB_USER} WITH SUPERUSER LOGIN PASSWORD '$DB_PASS';"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to homer_user;"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to homer_user;"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_config to ${DB_USER};"
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE homer_data to ${DB_USER};"
   cd $cwd
 }
 
@@ -324,9 +359,14 @@ install_homer(){
           $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.deb.sh?any=true | sudo bash
           $cmd_apt_get install homer-app heplify-server -y
   else
-          local cmd_yum=$(locate_cmd "yum")
+          local cmd_rpm
+          if have_commands "dnf"; then
+            cmd_rpm=$(locate_cmd "dnf")
+          else
+            cmd_rpm=$(locate_cmd "yum")
+          fi
           $cmd_curl -s https://packagecloud.io/install/repositories/qxip/sipcapture/script.rpm.sh?any=true | sudo bash
-          $cmd_yum install homer-app heplify-server -y
+          $cmd_rpm install homer-app heplify-server -y
   fi
   
   $cmd_sed -i -e "s/homer_user/$DB_USER/g" /usr/local/homer/etc/webapp_config.json
@@ -480,6 +520,53 @@ setup_centos_7() {
   #        "y"|"yes"|"Y"|"Yes"|"YES") setup_influxdb;;
   #        *) echo "...... [ Exiting ]"; echo;;
   # esac
+}
+
+setup_el_8_9() {
+  # RHEL-compatible 8.x / 9.x (AlmaLinux, CentOS Stream, etc.)
+  local el_major="${DISTRO_VERSION%%.*}"
+  local base_pkg_list="wget curl mlocate make cmake gcc gcc-c++ chrony yum-utils net-tools epel-release htop vim openssl"
+  local cmd_dnf
+  local cmd_service=$(locate_cmd "systemctl")
+  local cmd_sed=$(locate_cmd "sed")
+
+  if have_commands "dnf"; then
+    cmd_dnf=$(locate_cmd "dnf")
+  else
+    cmd_dnf=$(locate_cmd "yum")
+  fi
+
+  $cmd_dnf -y update && $cmd_dnf -y upgrade
+  $cmd_dnf install -y $base_pkg_list
+
+  echo "Disabling SELinux"
+  echo "Reboot required after installation completes"
+  if command -v setenforce >/dev/null 2>&1; then
+    setenforce 0 || true
+  fi
+  sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
+
+  $cmd_dnf -y install "https://download.postgresql.org/pub/repos/yum/reporpms/EL-${el_major}-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+  $cmd_dnf install -y postgresql15-server
+  updatedb
+  local cmd_locatepostgre="$(locate postgresql-15-setup | head -1)"
+  $cmd_locatepostgre initdb
+  $cmd_sed -i 's/\(host  *all  *all  *127.0.0.1\/32  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
+  $cmd_sed -i 's/\(host  *all  *all  *::1\/128  *\)ident/\1md5/' /var/lib/pgsql/15/data/pg_hba.conf
+  $cmd_service daemon-reload
+  $cmd_service enable postgresql-15
+  $cmd_service restart postgresql-15
+  create_postgres_user_database
+
+  install_homer
+
+  echo "Configuring FirewallD"
+  firewall-cmd --permanent --zone=public --add-port=9080/udp
+  firewall-cmd --permanent --zone=public --add-port=9080/tcp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888}/udp
+  firewall-cmd --permanent --zone=public --add-port={9060,9096,8086,8888,9061}/tcp
+  firewall-cmd --reload
+  echo "FirewallD configured"
 }
 
 setup_debian() {
